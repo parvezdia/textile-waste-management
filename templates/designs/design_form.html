@@ -84,19 +84,21 @@
                     <h5 class="mb-3">Required Materials</h5>
                     {{ materials_formset.management_form }}
                     <div id="materials-formset">
-                        {% for material_form in materials_formset %}
-                            <div class="material-form mb-3">
+                        {% for material_form in materials_formset %}                            <div class="materials-form mb-3">
                                 <div class="card">
                                     <div class="card-body">
                                         {{ material_form.id }}
-                                        <div class="row g-3">
-                                            <div class="col-md-6">
+                                        <div class="row g-3">                                            <div class="col-md-4">
                                                 <label for="{{ material_form.material.id_for_label }}" class="form-label">Material Type</label>
-                                                {{ material_form.material|addclass:"form-control select2" }}
+                                                {{ material_form.material|addclass:"form-control" }}
                                             </div>
-                                            <div class="col-md-6">
+                                            <div class="col-md-4">
                                                 <label for="{{ material_form.type.id_for_label }}" class="form-label">Material Category</label>
-                                                {{ material_form.type|addclass:"form-control select2" }}
+                                                {{ material_form.type|addclass:"form-control" }}
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label for="{{ material_form.color.id_for_label }}" class="form-label">Color</label>
+                                                {{ material_form.color|addclass:"form-control" }}
                                             </div>
                                             <div class="col-md-4">
                                                 <label for="{{ material_form.length.id_for_label }}" class="form-label">Length</label>
@@ -119,18 +121,19 @@
                                                 {{ material_form.quality_grade|addclass:"form-select" }}
                                             </div>
                                             <div class="col-md-2 d-flex align-items-end">
-                                                {{ material_form.DELETE|addclass:"form-check-input" }}
-                                                <label class="form-check-label ms-2">Delete</label>
+                                                <button type="button" class="btn btn-sm btn-danger delete-material">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                                {{ material_form.DELETE|addclass:"form-check-input d-none" }}
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         {% endfor %}
-                    </div>
-                    <!-- <button type="button" class="btn btn-outline-primary mb-3" id="add-material">
+                    </div>                    <button type="button" class="btn btn-outline-primary mb-3" id="add-material">
                         Add Material
-                    </button> -->
+                    </button>
 
                     <hr>
                     <h5 class="mb-3">Customization Options</h5>
@@ -203,12 +206,26 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- Add jQuery before using jQuery features -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Add Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<!-- Add Select2 CSS -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@x.x.x/dist/select2-bootstrap4.min.css" rel="stylesheet" />
+
 <script>
     // Initialize Select2 for dynamic form elements
     function initializeSelect2() {
-        $('.select2').select2({
-            theme: 'bootstrap4',
-            width: '100%'
+        $('.select2').each(function() {
+            $(this).select2({
+                theme: 'bootstrap4',
+                width: '100%',
+                dropdownAutoWidth: true,
+                tags: true,
+                allowClear: true,
+                placeholder: "Select or type to create"
+            });
         });
     }
 
@@ -325,9 +342,8 @@
 </script>
 {% endblock %}
 
-{% block extra_templates %}
-<div id="materials-empty-form" class="d-none">
-    <div class="material-form mb-3">
+{% block extra_templates %}    <div id="materials-empty-form" class="d-none">
+    <div class="materials-form mb-3">
         <div class="card">
             <div class="card-body">
                 {{ materials_formset.empty_form.id }}
@@ -361,8 +377,10 @@
                         {{ materials_formset.empty_form.quality_grade|addclass:"form-select" }}
                     </div>
                     <div class="col-md-2 d-flex align-items-end">
-                        {{ materials_formset.empty_form.DELETE|addclass:"form-check-input" }}
-                        <label class="form-check-label ms-2">Delete</label>
+                        <button type="button" class="btn btn-sm btn-danger delete-material">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        {{ materials_formset.empty_form.DELETE|addclass:"form-check-input d-none" }}
                     </div>
                 </div>
             </div>

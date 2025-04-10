@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+import logging
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -44,7 +46,7 @@ INSTALLED_APPS = [
     "orders",
     "transactions",
     "notifications",
-    'channels',
+    "channels",
 ]
 
 MIDDLEWARE = [
@@ -213,15 +215,18 @@ LOGGING = {
 }
 
 # Ensure logs directory exists
-import os
 
-if not os.path.exists("logs"):
-    os.makedirs("logs")
+
+try:
+    if not os.path.exists("logs"):
+        os.makedirs("logs")
+except OSError as e:
+    logging.warning(f"Failed to create logs directory: {e}")
+    # Fallback to logging to console only if file logging fails
+    for handler_name, handler in LOGGING["handlers"].items():
+        if handler.get("class") == "logging.FileHandler":
+            LOGGING["handlers"][handler_name] = LOGGING["handlers"]["console"]
 
 # Channels Configuration
-ASGI_APPLICATION = 'config.asgi.application'
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer'
-    }
-}
+ASGI_APPLICATION = "config.asgi.application"
+CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}

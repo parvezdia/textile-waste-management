@@ -88,11 +88,20 @@
                                 <a href="{% url 'designs:design_detail' design.design_id %}" class="text-decoration-none">
                                     {{ design.name }}
                                 </a>
-                            </td>
-                            <td>
-                                <span class="badge bg-{{ design.status|lower }}">
-                                    {{ design.get_status_display }}
-                                </span>
+                            </td>                            <td>
+                                {% if design.status == "PUBLISHED" %}
+                                    <span class="badge bg-success text-white">{{ design.get_status_display }}</span>
+                                {% elif design.status == "DRAFT" %}
+                                    <span class="badge bg-warning text-dark">{{ design.get_status_display }}</span>
+                                {% elif design.status == "PENDING_REVIEW" %}
+                                    <span class="badge bg-info text-dark">{{ design.get_status_display }}</span>
+                                {% elif design.status == "ARCHIVED" %}
+                                    <span class="badge bg-secondary text-white">{{ design.get_status_display }}</span>
+                                {% elif design.status == "DELETED" %}
+                                    <span class="badge bg-danger text-white">{{ design.get_status_display }}</span>
+                                {% else %}
+                                    <span class="badge bg-primary text-white">{{ design.get_status_display }}</span>
+                                {% endif %}
                             </td>
                             <td>{{ design.date_created|date:"M d, Y" }}</td>
                             <td>{{ design.last_modified|date:"M d, Y" }}</td>

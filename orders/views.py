@@ -26,16 +26,19 @@ def order_detail(request, order_id):
 
 
 @login_required
-def create_order(request):
+def create_order(request, design_id=None):
     if not hasattr(request.user, "buyer"):
         messages.error(request, "Only buyers can create orders.")
         return redirect("orders:order_list")
-
+    design = None
+    if design_id:
+        from designs.models import Design
+        design = get_object_or_404(Design, design_id=design_id)
+        
     if request.method == "POST":
         order_form = OrderForm(request.POST)
         payment_form = PaymentInfoForm(request.POST)
         delivery_form = DeliveryInfoForm(request.POST)
-
         if all(
             [order_form.is_valid(), payment_form.is_valid(), delivery_form.is_valid()]
         ):
@@ -49,25 +52,28 @@ def create_order(request):
                     order.delivery_info = delivery
                     order.total_price = order.calculate_total_price()
                     order.save()
-
                 messages.success(request, "Order created successfully!")
                 return redirect("orders:order_detail", order_id=order.order_id)
             except Exception as e:
                 messages.error(request, f"Error creating order: {str(e)}")
     else:
-        order_form = OrderForm()
+        initial_data = {}
+        if design:
+            initial_data['design'] = design.id
+        order_form = OrderForm(initial=initial_data)
         payment_form = PaymentInfoForm()
         delivery_form = DeliveryInfoForm()
 
-    return render(
-        request,
-        "orders/order_form.html",
-        {
-            "order_form": order_form,
-            "payment_form": payment_form,
-            "delivery_form": delivery_form,
-        },
-    )
+    context = {
+        "order_form": order_form,
+        "payment_form": payment_form,
+        "delivery_form": delivery_form,
+    }
+    
+    if design:
+        context["design"] = design
+        
+    return render(request, "orders/order_form.html", context)
 
 
 @login_required

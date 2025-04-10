@@ -21,8 +21,38 @@ def design_list(request):
 
 
 def design_detail(request, design_id):
-    design = get_object_or_404(Design, design_id=design_id, status="PUBLISHED")
-    return render(request, "designs/design_detail.html", {"design": design})
+    # Get the design with all related data - use select_related for designer too
+    design_query = Design.objects.select_related('designer').prefetch_related(
+        'required_materials__dimensions',  # Prefetch dimensions to avoid N+1 queries
+        'customization_options'
+    )
+    
+    # Handle view permissions
+    if request.user.is_authenticated and hasattr(request.user, 'designer'):
+        # Designers can view any of their own designs
+        if request.user.designer.designs.filter(design_id=design_id).exists():
+            design = get_object_or_404(design_query, design_id=design_id)
+        else:
+            # Other designers can only see published designs
+            design = get_object_or_404(design_query, design_id=design_id, status="PUBLISHED")
+    else:
+        # Non-designers can only see published designs
+        design = get_object_or_404(design_query, design_id=design_id, status="PUBLISHED")
+    
+    # Explicitly load required materials to avoid any issues
+    materials = list(design.required_materials.select_related('dimensions').all())
+    
+    # Debug output to verify materials are being loaded
+    print(f"Design {design_id} has {len(materials)} materials:")
+    for idx, material in enumerate(materials, 1):
+        print(f"  Material {idx}: {material.material} - Quantity: {material.quantity}")
+    
+    context = {
+        "design": design,
+        "materials": materials
+    }
+    
+    return render(request, "designs/design_detail.html", context)
 
 
 @login_required
@@ -35,8 +65,8 @@ def designer_dashboard(request):
     ]):
         messages.warning(request, "Please complete your profile setup to access the dashboard.")
         return redirect("accounts:profile_setup")
-    
-    designs = Design.objects.filter(designer__user=request.user)
+      # Get all designs except deleted ones
+    designs = Design.objects.filter(designer__user=request.user).exclude(status="DELETED")
     context = {
         "designs": designs,
         "total_designs": designs.count(),
@@ -82,6 +112,24 @@ def design_create(request):
         if forms_valid and materials_valid and options_valid:
             try:
                 from django.db import transaction
+                from accounts.models import FactoryPartner, FactoryDetails
+                
+                # First, check if we have a system factory to use
+                system_factory = None
+                try:
+                    # Try to find an existing system factory
+                    from django.contrib.auth import get_user_model
+                    User = get_user_model()
+                    system_user = User.objects.filter(username='system').first()
+                    if system_user:
+                        system_factory = FactoryPartner.objects.filter(user=system_user).first()
+                    
+                    # If no system factory exists, use the first available factory
+                    if not system_factory:
+                        system_factory = FactoryPartner.objects.first()
+                except Exception as e:
+                    print(f"Error finding system factory: {str(e)}")
+                    
                 with transaction.atomic():
                     # Create design instance
                     design = form.save(commit=False)
@@ -110,7 +158,8 @@ def design_create(request):
                                 color=material_data.get('color'),
                                 quality_grade=material_data['quality_grade'],
                                 dimensions=dimensions,
-                                status="PENDING_REVIEW"
+                                status="PENDING_REVIEW",
+                                factory=system_factory  # Add the factory reference here
                             )
                             design.required_materials.add(material)
                     

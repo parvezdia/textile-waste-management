@@ -35,27 +35,28 @@
                         <ul class="list-unstyled">
                             <li><strong>Designer:</strong> {{ design.designer.user.username }}</li>
                             <li><strong>Status:</strong> <span class="badge bg-{{ design.status|lower }}">{{ design.get_status_display }}</span></li>
-                            <li><strong>Price:</strong> ${{ design.price }}</li>
-                            <li><strong>Created:</strong> {{ design.created_at|date:"F j, Y" }}</li>
-                            <li><strong>Last Updated:</strong> {{ design.updated_at|date:"F j, Y" }}</li>
-                            {% if design.is_customizable %}
+                            <li><strong>Price:</strong> ${{ design.price }}</li>                            <li><strong>Created:</strong> {{ design.date_created|date:"F j, Y" }}</li>
+                            <li><strong>Last Updated:</strong> {{ design.last_modified|date:"F j, Y" }}</li>                            {% if design.is_customizable %}
                                 <li><span class="badge bg-info">Customizable</span></li>
                             {% endif %}
                         </ul>
-                    </div>
-                    <div class="col-md-6">
+                    </div>                    <div class="col-md-6">
                         <h5>Required Materials</h5>
                         <ul class="list-unstyled">
-                            {% for material in design.required_materials.all %}
+                            {% for material in materials %}
                                 <li class="mb-2">
                                     <div class="d-flex justify-content-between">
                                         <span>{{ material.material }}</span>
                                         <span>{{ material.quantity }} units</span>
                                     </div>
-                                    {% if material.waste_item %}
-                                        <small class="text-muted">From: {{ material.waste_item.factory.factory_details.factory_name }}</small>
+                                    {% if material.color %}
+                                        <small class="text-muted">Color: {{ material.color }}</small>
                                     {% endif %}
+                                    <small class="text-muted d-block">Quality: {{ material.get_quality_grade_display }}</small>
+                                    <small class="text-muted d-block">Dimensions: {{ material.dimensions.length }}x{{ material.dimensions.width }} {{ material.dimensions.unit }}</small>
                                 </li>
+                            {% empty %}
+                                <li class="text-muted">No materials specified</li>
                             {% endfor %}
                         </ul>
                     </div>
