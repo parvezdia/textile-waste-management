@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}Notifications - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">Notifications</h4>
+            {% if notifications %}
+            <button class="btn btn-outline-secondary btn-sm" onclick="markAllAsRead()">
+                Mark All as Read
+            </button>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            {% if notifications %}
+                <div class="list-group">
+                    {% for notification in notifications %}
+                        <div class="list-group-item {% if not notification.is_read %}list-group-item-light unread{% endif %}"
+                             data-notification-id="{{ notification.notification_id }}">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h6 class="mb-1">{{ notification.get_type_display }}</h6>
+                                <small class="text-muted">{{ notification.date_created|timesince }} ago</small>
+                            </div>
+                            <p class="mb-1">{{ notification.message }}</p>
+                            {% if not notification.is_read %}
+                                <button class="btn btn-sm btn-link p-0" 
+                                        onclick="markAsRead('{{ notification.notification_id }}')">
+                                    Mark as read
+                                </button>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">No notifications to display</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ STATIC_URL }}js/realtime-notifications.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize notifications system
+        const unreadCount = {{ unread_count }};
+        if (unreadCount > 0) {
+            const badge = document.querySelector('.notification-badge');
+            if (badge) {
+                badge.textContent = unreadCount;
+                badge.style.display = 'inline';
+            }
+        }
+    });
+</script>
+{% endblock %}

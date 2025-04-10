@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ design.name }} - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">{{ design.name }}</h4>
+                <div>
+                    {% if user.designer == design.designer %}
+                        <a href="{% url 'designs:design_edit' design.design_id %}" class="btn btn-warning">Edit</a>
+                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                            Delete
+                        </button>
+                    {% elif user.user_type == 'BUYER' and design.status == 'PUBLISHED' %}
+                        <a href="{% url 'orders:create_order' design.design_id %}" class="btn btn-success">Order Now</a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                {% if design.image %}
+                    <img src="{{ design.image.url }}" class="img-fluid rounded mb-4" alt="{{ design.name }}">
+                {% endif %}
+                
+                <div class="mb-4">
+                    <h5>Description</h5>
+                    <p>{{ design.description }}</p>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h5>Design Details</h5>
+                        <ul class="list-unstyled">
+                            <li><strong>Designer:</strong> {{ design.designer.user.username }}</li>
+                            <li><strong>Status:</strong> <span class="badge bg-{{ design.status|lower }}">{{ design.get_status_display }}</span></li>
+                            <li><strong>Price:</strong> ${{ design.price }}</li>
+                            <li><strong>Created:</strong> {{ design.created_at|date:"F j, Y" }}</li>
+                            <li><strong>Last Updated:</strong> {{ design.updated_at|date:"F j, Y" }}</li>
+                            {% if design.is_customizable %}
+                                <li><span class="badge bg-info">Customizable</span></li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>Required Materials</h5>
+                        <ul class="list-unstyled">
+                            {% for material in design.required_materials.all %}
+                                <li class="mb-2">
+                                    <div class="d-flex justify-content-between">
+                                        <span>{{ material.material }}</span>
+                                        <span>{{ material.quantity }} units</span>
+                                    </div>
+                                    {% if material.waste_item %}
+                                        <small class="text-muted">From: {{ material.waste_item.factory.factory_details.factory_name }}</small>
+                                    {% endif %}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+
+                {% if design.specifications %}
+                <div class="mb-4">
+                    <h5>Technical Specifications</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                {% for spec, value in design.specifications.items %}
+                                    <tr>
+                                        <th>{{ spec|title }}</th>
+                                        <td>{{ value }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if design.is_customizable %}
+                <div class="mb-4">
+                    <h5>Customization Options</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Option</th>
+                                    <th>Available Choices</th>
+                                    <th>Additional Cost</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for option in design.customization_options.all %}
+                                    <tr>
+                                        <td>{{ option.name }}</td>
+                                        <td>
+                                            <ul class="list-unstyled mb-0">
+                                                {% for choice in option.choices %}
+                                                    <li>{{ choice }}</li>
+                                                {% endfor %}
+                                            </ul>
+                                        </td>
+                                        <td>${{ option.additional_cost }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Designer Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    {% if design.designer.profile_image %}
+                        <img src="{{ design.designer.profile_image.url }}" class="rounded-circle me-3" width="64" height="64" alt="Designer">
+                    {% endif %}
+                    <div>
+                        <h6 class="mb-1">{{ design.designer.user.username }}</h6>
+                        <p class="mb-0 text-muted">{{ design.designer.designs.count }} Designs</p>
+                    </div>
+                </div>
+                <p>{{ design.designer.bio }}</p>
+                <a href="#" class="btn btn-outline-primary btn-sm">View Profile</a>
+            </div>
+        </div>
+
+        {% if user.user_type == 'BUYER' %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Order Information</h5>
+            </div>
+            <div class="card-body">
+                <p>Ready to order this design?</p>
+                <ul class="list-unstyled mb-3">
+                    <li><strong>Base Price:</strong> ${{ design.price }}</li>
+                    {% if design.is_customizable %}
+                        <li><strong>Additional Costs:</strong> May vary based on customization</li>
+                    {% endif %}
+                    <li><strong>Estimated Delivery:</strong> {{ design.estimated_delivery_days }} days</li>
+                </ul>
+                {% if design.status == 'PUBLISHED' %}
+                    <a href="{% url 'orders:create_order' design.design_id %}" class="btn btn-success w-100">Order Now</a>
+                {% else %}
+                    <button class="btn btn-secondary w-100" disabled>Currently Unavailable</button>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% if user.designer == design.designer %}
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete the design "{{ design.name }}"?
+                This action cannot be undone.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{% url 'designs:design_delete' design.design_id %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

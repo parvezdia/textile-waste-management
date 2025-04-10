@@ -1,0 +1,412 @@
+{% extends 'base.html' %}
+{% load form_filters %}
+
+{% block title %}{{ action }} Design - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">{{ action }} Design</h4>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <h5 class="mb-3">Basic Information</h5>
+                    <div class="mb-3">
+                        <label for="{{ form.name.id_for_label }}" class="form-label">Name</label>
+                        {{ form.name|addclass:"form-control" }}
+                        {% if form.name.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.name.errors|join:", " }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                        {{ form.description|addclass:"form-control" }}
+                        {% if form.description.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.description.errors|join:", " }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.price.id_for_label }}" class="form-label">Price ($)</label>
+                            {{ form.price|addclass:"form-control" }}
+                            {% if form.price.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.price.errors|join:", " }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.status.id_for_label }}" class="form-label">Status</label>
+                            {{ form.status|addclass:"form-select" }}
+                            {% if form.status.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.status.errors|join:", " }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.image.id_for_label }}" class="form-label">Design Image</label>
+                        {% if form.instance.image %}
+                            <div class="mb-2">
+                                <img src="{{ form.instance.image.url }}" class="img-thumbnail" style="max-height: 200px;" alt="Current design image">
+                            </div>
+                        {% endif %}
+                        {{ form.image|addclass:"form-control" }}
+                        {% if form.image.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.image.errors|join:", " }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <hr>
+                    <h5 class="mb-3">Required Materials</h5>
+                    {{ materials_formset.management_form }}
+                    <div id="materials-formset">
+                        {% for material_form in materials_formset %}
+                            <div class="material-form mb-3">
+                                <div class="card">
+                                    <div class="card-body">
+                                        {{ material_form.id }}
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <label for="{{ material_form.material.id_for_label }}" class="form-label">Material Type</label>
+                                                {{ material_form.material|addclass:"form-control select2" }}
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="{{ material_form.type.id_for_label }}" class="form-label">Material Category</label>
+                                                {{ material_form.type|addclass:"form-control select2" }}
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label for="{{ material_form.length.id_for_label }}" class="form-label">Length</label>
+                                                {{ material_form.length|addclass:"form-control" }}
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label for="{{ material_form.width.id_for_label }}" class="form-label">Width</label>
+                                                {{ material_form.width|addclass:"form-control" }}
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label for="{{ material_form.unit.id_for_label }}" class="form-label">Unit</label>
+                                                {{ material_form.unit|addclass:"form-select" }}
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="{{ material_form.quantity_required.id_for_label }}" class="form-label">Quantity Required</label>
+                                                {{ material_form.quantity_required|addclass:"form-control" }}
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label for="{{ material_form.quality_grade.id_for_label }}" class="form-label">Quality Grade</label>
+                                                {{ material_form.quality_grade|addclass:"form-select" }}
+                                            </div>
+                                            <div class="col-md-2 d-flex align-items-end">
+                                                {{ material_form.DELETE|addclass:"form-check-input" }}
+                                                <label class="form-check-label ms-2">Delete</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <!-- <button type="button" class="btn btn-outline-primary mb-3" id="add-material">
+                        Add Material
+                    </button> -->
+
+                    <hr>
+                    <h5 class="mb-3">Customization Options</h5>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.is_customizable|addclass:"form-check-input" }}
+                            <label class="form-check-label" for="{{ form.is_customizable.id_for_label }}">
+                                Allow Customization
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="customization-options" {% if not form.is_customizable.value %}style="display: none;"{% endif %}>
+                        {{ options_formset.management_form }}
+                        <div id="options-formset">
+                            {% for option_form in options_formset %}
+                                <div class="option-form mb-3">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            {{ option_form.id }}
+                                            <div class="row g-3">
+                                                <div class="col-md-4">
+                                                    <label for="{{ option_form.name.id_for_label }}" class="form-label">Option Name</label>
+                                                    {{ option_form.name|addclass:"form-control" }}
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label for="{{ option_form.type.id_for_label }}" class="form-label">Option Type</label>
+                                                    {{ option_form.type|addclass:"form-select" }}
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <label for="{{ option_form.available_choices.id_for_label }}" class="form-label">Available Choices</label>
+                                                    {{ option_form.available_choices|addclass:"form-control" }}
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <label for="{{ option_form.price_impact.id_for_label }}" class="form-label">Price Impact</label>
+                                                    {{ option_form.price_impact|addclass:"form-control" }}
+                                                </div>
+                                                <div class="col-md-12">
+                                                    {% if option_form.available_choices.help_text %}
+                                                        <small class="text-muted">{{ option_form.available_choices.help_text }}</small>
+                                                    {% endif %}
+                                                    {% if option_form.price_impact.help_text %}
+                                                        <small class="text-muted d-block">{{ option_form.price_impact.help_text }}</small>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="col-md-12 d-flex justify-content-end">
+                                                    {{ option_form.DELETE|addclass:"form-check-input" }}
+                                                    <label class="form-check-label ms-2">Delete</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <button type="button" class="btn btn-outline-primary mb-3" id="add-option">
+                            Add Option
+                        </button>
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{% if design %}{% url 'designs:design_detail' design.design_id %}{% else %}{% url 'designs:design_list' %}{% endif %}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">{{ action }} Design</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize Select2 for dynamic form elements
+    function initializeSelect2() {
+        $('.select2').select2({
+            theme: 'bootstrap4',
+            width: '100%'
+        });
+    }
+
+    // Handle dynamic formsets
+    function updateFormsetIndex(formset, prefix) {
+        const forms = formset.getElementsByClassName(`${prefix}-form`);
+        const totalForms = document.getElementById(`id_${prefix}-TOTAL_FORMS`);
+        
+        Array.from(forms).forEach((form, index) => {
+            Array.from(form.getElementsByTagName('input')).forEach(input => {
+                input.name = input.name.replace(new RegExp(`${prefix}-\\d+`), `${prefix}-${index}`);
+                input.id = input.id.replace(new RegExp(`${prefix}-\\d+`), `${prefix}-${index}`);
+            });
+            Array.from(form.getElementsByTagName('select')).forEach(select => {
+                select.name = select.name.replace(new RegExp(`${prefix}-\\d+`), `${prefix}-${index}`);
+                select.id = select.id.replace(new RegExp(`${prefix}-\\d+`), `${prefix}-${index}`);
+            });
+            Array.from(form.getElementsByTagName('label')).forEach(label => {
+                if (label.getAttribute('for')) {
+                    label.setAttribute('for', label.getAttribute('for').replace(new RegExp(`${prefix}-\\d+`), `${prefix}-${index}`));
+                }
+            });
+        });
+        
+        totalForms.value = forms.length;
+    }
+
+    function addFormsetForm(prefix) {
+        const formset = document.getElementById(`${prefix}-formset`);
+        const emptyForm = document.getElementById(`${prefix}-empty-form`);
+        if (emptyForm) {
+            const newForm = emptyForm.cloneNode(true);
+            newForm.classList.remove('d-none');
+            newForm.removeAttribute('id');
+            
+            // Initialize select2 for new form's select elements
+            Array.from(newForm.getElementsByTagName('select')).forEach(select => {
+                if (select.classList.contains('select2')) {
+                    $(select).select2();
+                }
+            });
+            
+            formset.appendChild(newForm);
+            updateFormsetIndex(formset, prefix);
+        }
+    }
+
+    function deleteFormsetForm(prefix, button) {
+        const formDiv = button.closest(`.${prefix}-form`);
+        const deleteCheckbox = formDiv.querySelector('input[type="checkbox"][name$="-DELETE"]');
+        
+        if (deleteCheckbox) {
+            deleteCheckbox.checked = true;
+            formDiv.style.display = 'none';
+        } else {
+            formDiv.remove();
+        }
+        
+        const formset = document.getElementById(`${prefix}-formset`);
+        updateFormsetIndex(formset, prefix);
+    }
+
+    // Document ready handler
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Select2
+        initializeSelect2();
+        
+        // Material formset handling
+        document.getElementById('add-material').addEventListener('click', () => {
+            addFormsetForm('materials');
+        });
+
+        // Option formset handling
+        document.getElementById('add-option').addEventListener('click', () => {
+            addFormsetForm('options');
+        });
+
+        // Delete button handlers
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('delete-material')) {
+                deleteFormsetForm('materials', e.target);
+            } else if (e.target.classList.contains('delete-option')) {
+                deleteFormsetForm('options', e.target);
+            }
+        });
+
+        // Toggle customization options
+        document.getElementById('{{ form.is_customizable.id_for_label }}').addEventListener('change', function() {
+            const optionsDiv = document.getElementById('customization-options');
+            optionsDiv.style.display = this.checked ? 'block' : 'none';
+        });
+
+        // Preview image before upload
+        document.getElementById('{{ form.image.id_for_label }}').addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.createElement('img');
+                    preview.src = e.target.result;
+                    preview.classList.add('img-thumbnail', 'mb-2');
+                    preview.style.maxHeight = '200px';
+                    
+                    const existingPreview = this.parentElement.querySelector('img');
+                    if (existingPreview) {
+                        existingPreview.replaceWith(preview);
+                    } else {
+                        this.parentElement.insertBefore(preview, this);
+                    }
+                }.bind(this);
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+    });
+</script>
+{% endblock %}
+
+{% block extra_templates %}
+<div id="materials-empty-form" class="d-none">
+    <div class="material-form mb-3">
+        <div class="card">
+            <div class="card-body">
+                {{ materials_formset.empty_form.id }}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Material Type</label>
+                        {{ materials_formset.empty_form.material|addclass:"form-control select2" }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Material Category</label>
+                        {{ materials_formset.empty_form.type|addclass:"form-control select2" }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Length</label>
+                        {{ materials_formset.empty_form.length|addclass:"form-control" }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Width</label>
+                        {{ materials_formset.empty_form.width|addclass:"form-control" }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Unit</label>
+                        {{ materials_formset.empty_form.unit|addclass:"form-select" }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Quantity Required</label>
+                        {{ materials_formset.empty_form.quantity_required|addclass:"form-control" }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Quality Grade</label>
+                        {{ materials_formset.empty_form.quality_grade|addclass:"form-select" }}
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        {{ materials_formset.empty_form.DELETE|addclass:"form-check-input" }}
+                        <label class="form-check-label ms-2">Delete</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="options-empty-form" class="d-none">
+    <div class="option-form mb-3">
+        <div class="card">
+            <div class="card-body">
+                {{ options_formset.empty_form.id }}
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Option Name</label>
+                        {{ options_formset.empty_form.name|addclass:"form-control" }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Option Type</label>
+                        {{ options_formset.empty_form.type|addclass:"form-select" }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Available Choices</label>
+                        {{ options_formset.empty_form.available_choices|addclass:"form-control" }}
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Price Impact</label>
+                        {{ options_formset.empty_form.price_impact|addclass:"form-control" }}
+                    </div>
+                    <div class="col-md-12">
+                        {% if options_formset.empty_form.available_choices.help_text %}
+                            <small class="text-muted">{{ options_formset.empty_form.available_choices.help_text }}</small>
+                        {% endif %}
+                        {% if options_formset.empty_form.price_impact.help_text %}
+                            <small class="text-muted d-block">{{ options_formset.empty_form.price_impact.help_text }}</small>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-12 d-flex justify-content-end">
+                        {{ options_formset.empty_form.DELETE|addclass:"form-check-input" }}
+                        <label class="form-check-label ms-2">Delete</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

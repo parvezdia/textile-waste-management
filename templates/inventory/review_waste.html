@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+
+{% block title %}Review Waste - {{ waste.waste_id }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'inventory:waste_list' %}">Inventory</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'inventory:waste_detail' waste.waste_id %}">{{ waste.waste_id }}</a></li>
+            <li class="breadcrumb-item active">Review</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <!-- Review Form -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h4 class="mb-0">Review Waste Entry</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        
+                        <!-- Current Details -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-muted mb-3">Current Details</h5>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Factory</label>
+                                <p class="form-control-plaintext">{{ waste.factory.name }}</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Type</label>
+                                <p class="form-control-plaintext">{{ waste.type }}</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Material</label>
+                                <p class="form-control-plaintext">{{ waste.material }}</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Quantity</label>
+                                <p class="form-control-plaintext">{{ waste.quantity }} {{ waste.unit }}</p>
+                            </div>
+                        </div>
+
+                        <!-- Review Form -->
+                        <div class="row">
+                            <div class="col-12">
+                                <h5 class="text-muted mb-3">Review Decision</h5>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.status.id_for_label }}" class="form-label">Status Decision*</label>
+                                {{ form.status }}
+                                {% if form.status.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.status.errors.0 }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.quality_grade.id_for_label }}" class="form-label">Quality Grade*</label>
+                                {{ form.quality_grade }}
+                                {% if form.quality_grade.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.quality_grade.errors.0 }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-12 mb-3">
+                                <label for="{{ form.storage_location.id_for_label }}" class="form-label">Storage Location</label>
+                                {{ form.storage_location }}
+                                {% if form.storage_location.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.storage_location.errors.0 }}
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-12 mb-3">
+                                <label for="{{ form.notes.id_for_label }}" class="form-label">Review Notes</label>
+                                {{ form.notes }}
+                                <div class="form-text">Add any notes about your review decision here.</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.sustainability_score.id_for_label }}" class="form-label">
+                                    Sustainability Score (0-100)
+                                </label>
+                                {{ form.sustainability_score }}
+                                <div class="form-text">Rate the sustainability potential of this waste.</div>
+                            </div>
+                        </div>
+
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                            <p class="mb-0">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <div class="d-flex justify-content-end gap-2 mt-4">
+                            <a href="{% url 'inventory:waste_detail' waste.waste_id %}" class="btn btn-light">Cancel</a>
+                            <button type="submit" class="btn btn-success">Submit Review</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Guidelines Sidebar -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Review Guidelines</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h6>Status Definitions</h6>
+                        <ul class="list-unstyled mb-0">
+                            <li class="mb-2">
+                                <span class="badge bg-success me-2">Available</span>
+                                Ready for reuse/recycling
+                            </li>
+                            <li class="mb-2">
+                                <span class="badge bg-warning me-2">Pending Review</span>
+                                Awaiting quality check
+                            </li>
+                            <li class="mb-2">
+                                <span class="badge bg-danger me-2">Rejected</span>
+                                Does not meet quality standards
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6>Quality Grades</h6>
+                        <ul class="list-unstyled mb-0">
+                            <li class="mb-2">
+                                <strong>Excellent:</strong> Like new condition
+                            </li>
+                            <li class="mb-2">
+                                <strong>Good:</strong> Minor wear, fully functional
+                            </li>
+                            <li class="mb-2">
+                                <strong>Fair:</strong> Usable with some defects
+                            </li>
+                            <li>
+                                <strong>Poor:</strong> Major defects, limited use
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h6>Sustainability Score Guide</h6>
+                        <ul class="list-unstyled mb-0">
+                            <li class="mb-2">
+                                <strong>90-100:</strong> Highly recyclable
+                            </li>
+                            <li class="mb-2">
+                                <strong>70-89:</strong> Good recycling potential
+                            </li>
+                            <li class="mb-2">
+                                <strong>50-69:</strong> Moderate potential
+                            </li>
+                            <li>
+                                <strong>0-49:</strong> Limited recycling options
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    // Form validation
+    (function () {
+        'use strict'
+        var forms = document.querySelectorAll('.needs-validation')
+        Array.prototype.slice.call(forms)
+            .forEach(function (form) {
+                form.addEventListener('submit', function (event) {
+                    if (!form.checkValidity()) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                    }
+                    form.classList.add('was-validated')
+                }, false)
+            })
+    })()
+
+    // Update sustainability score based on quality grade
+    document.getElementById('{{ form.quality_grade.id_for_label }}').addEventListener('change', function(e) {
+        const qualityScores = {
+            'EXCELLENT': 90,
+            'GOOD': 75,
+            'FAIR': 50,
+            'POOR': 25
+        };
+        const score = qualityScores[e.target.value] || 0;
+        document.getElementById('{{ form.sustainability_score.id_for_label }}').value = score;
+    });
+</script>
+{% endblock %}
+
+{% endblock %}

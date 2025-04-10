@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+
+{% block title %}Inventory Report - TFWMS{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2>Inventory Report</h2>
+                <div class="btn-group">
+                    <a href="?{{ request.GET.urlencode }}&format=pdf" class="btn btn-outline-primary">
+                        <i class="fas fa-file-pdf me-2"></i>Download PDF
+                    </a>
+                    <a href="?{{ request.GET.urlencode }}&format=excel" class="btn btn-outline-success">
+                        <i class="fas fa-file-excel me-2"></i>Download Excel
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Summary Card -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h6 class="text-muted">Total Items</h6>
+                                <h2 class="mb-0">{{ report.total_items }}</h2>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h6 class="text-muted">Total Quantity</h6>
+                                <h2 class="mb-0">{{ report.total_quantity|floatformat:2 }} kg</h2>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h6 class="text-muted">Average Sustainability Score</h6>
+                                <h2 class="mb-0">{{ report.sustainability_metrics.average_score|floatformat:1 }}</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Environmental Impact -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Environmental Impact</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h6 class="text-muted mb-3">Impact Category: 
+                            <span class="badge {% if report.environmental_impact.impact_category == 'High' %}bg-success
+                                  {% elif report.environmental_impact.impact_category == 'Medium' %}bg-warning
+                                  {% else %}bg-danger{% endif %}">
+                                {{ report.environmental_impact.impact_category }}
+                            </span>
+                        </h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-3">
+                                <i class="fas fa-cloud me-2 text-primary"></i>
+                                <strong>CO₂ Emissions Saved:</strong>
+                                {{ report.environmental_impact.co2_saved|floatformat:1 }} kg
+                            </li>
+                            <li class="mb-3">
+                                <i class="fas fa-tint me-2 text-info"></i>
+                                <strong>Water Saved:</strong>
+                                {{ report.environmental_impact.water_saved|floatformat:0 }} liters
+                            </li>
+                            <li>
+                                <i class="fas fa-trash-alt me-2 text-success"></i>
+                                <strong>Landfill Space Saved:</strong>
+                                {{ report.environmental_impact.landfill_saved|floatformat:2 }} m³
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Material Analysis -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Material Analysis</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Material</th>
+                                    <th>Quantity</th>
+                                    <th>Items</th>
+                                    <th>Avg. Score</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for material in report.material_breakdown %}
+                                <tr>
+                                    <td>{{ material.name }}</td>
+                                    <td>{{ material.quantity|floatformat:1 }} kg</td>
+                                    <td>{{ material.items }}</td>
+                                    <td>{{ material.avg_score|floatformat:1 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trends Analysis -->
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">Trends Analysis</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3">Weekly Trends</h6>
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Week</th>
+                                            <th>Items</th>
+                                            <th>Avg. Score</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for trend in report.trends.weekly_trends %}
+                                        <tr>
+                                            <td>{{ trend.week|date:"M d, Y" }}</td>
+                                            <td>{{ trend.items_count }}</td>
+                                            <td>{{ trend.avg_sustainability|floatformat:1 }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3">Quality Distribution</h6>
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Quality Grade</th>
+                                            <th>Items</th>
+                                            <th>Avg. Score</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for quality in report.trends.quality_trends %}
+                                        <tr>
+                                            <td>{{ quality.quality_grade }}</td>
+                                            <td>{{ quality.total_items }}</td>
+                                            <td>{{ quality.avg_sustainability|floatformat:1 }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

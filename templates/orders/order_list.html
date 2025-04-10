@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+
+{% block title %}Orders - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2>Orders</h2>
+    </div>
+    <div class="col-auto">
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                Filter by Status
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item {% if not status_filter %}active{% endif %}" href="{% url 'orders:order_list' %}">All Orders</a></li>
+                {% for status in status_choices %}
+                    <li>
+                        <a class="dropdown-item {% if status_filter == status.0 %}active{% endif %}" 
+                           href="{% url 'orders:order_list' %}?status={{ status.0 }}">
+                            {{ status.1 }}
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+
+{% if orders %}
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Design</th>
+                        {% if user.user_type == 'DESIGNER' %}
+                            <th>Buyer</th>
+                        {% else %}
+                            <th>Designer</th>
+                        {% endif %}
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Total</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'orders:order_detail' order.order_id %}" class="text-decoration-none">
+                                    #{{ order.order_id }}
+                                </a>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    {% if order.design.image %}
+                                        <img src="{{ order.design.image.url }}" alt="{{ order.design.name }}" 
+                                             class="rounded me-2" style="width: 40px; height: 40px; object-fit: cover;">
+                                    {% endif %}
+                                    <div>
+                                        <div>{{ order.design.name }}</div>
+                                        <small class="text-muted">{{ order.design.description|truncatechars:50 }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            {% if user.user_type == 'DESIGNER' %}
+                                <td>{{ order.buyer.user.get_full_name }}</td>
+                            {% else %}
+                                <td>{{ order.design.designer.user.get_full_name }}</td>
+                            {% endif %}
+                            <td>
+                                <span class="badge bg-{{ order.status|lower }}">
+                                    {{ order.get_status_display }}
+                                </span>
+                            </td>
+                            <td>{{ order.created_at|date:"M d, Y" }}</td>
+                            <td>${{ order.total_amount }}</td>
+                            <td class="text-end">
+                                <div class="btn-group">
+                                    <a href="{% url 'orders:order_detail' order.order_id %}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        View
+                                    </a>
+                                    {% if order.status == 'PENDING' %}
+                                        {% if user.user_type == 'DESIGNER' and user.designer == order.design.designer %}
+                                            <button type="button" class="btn btn-sm btn-success" 
+                                                    onclick="acceptOrder('{{ order.order_id }}')">
+                                                Accept
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-danger" 
+                                                    onclick="rejectOrder('{{ order.order_id }}')">
+                                                Reject
+                                            </button>
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {% if orders.has_other_pages %}
+        <nav class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if orders.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ orders.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                            Previous
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">Previous</span>
+                    </li>
+                {% endif %}
+
+                {% for i in orders.paginator.page_range %}
+                    {% if orders.number == i %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ i }}</span>
+                        </li>
+                    {% else %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ i }}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                                {{ i }}
+                            </a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if orders.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ orders.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                            Next
+                        </a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled">
+                        <span class="page-link">Next</span>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% endif %}
+{% else %}
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <h4 class="text-muted mb-3">No Orders Found</h4>
+            <p class="text-muted mb-0">
+                {% if user.user_type == 'BUYER' %}
+                    Browse our designs to place your first order!
+                {% else %}
+                    No orders have been placed for your designs yet.
+                {% endif %}
+            </p>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function acceptOrder(orderId) {
+        if (confirm('Are you sure you want to accept this order?')) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/orders/${orderId}/accept/`;
+            
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            
+            form.appendChild(csrfInput);
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+
+    function rejectOrder(orderId) {
+        if (confirm('Are you sure you want to reject this order?')) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/orders/${orderId}/reject/`;
+            
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            
+            form.appendChild(csrfInput);
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+</script>
+{% endblock %}

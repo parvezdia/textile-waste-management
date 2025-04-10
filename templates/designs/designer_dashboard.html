@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+
+{% block title %}Designer Dashboard - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Welcome Section -->
+    <div class="row mb-4">
+        <div class="col">
+            <h2>Welcome, {{ user.username }}!</h2>
+            <p class="text-muted">Manage your designs and track your performance</p>
+        </div>
+        <div class="col-auto">
+            <a href="{% url 'designs:design_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Create New Design
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Total Designs</h5>
+                    <h2 class="mb-0">{{ total_designs }}</h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Published</h5>
+                    <h2 class="mb-0">{{ published_designs }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <h5 class="card-title">Drafts</h5>
+                    <h2 class="mb-0">{{ draft_designs }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-secondary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Archived</h5>
+                    <h2 class="mb-0">{{ archived_designs }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Designs Table -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Your Designs</h5>
+            <div class="btn-group">
+                <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                    Filter by Status
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="?status=all">All</a></li>
+                    <li><a class="dropdown-item" href="?status=published">Published</a></li>
+                    <li><a class="dropdown-item" href="?status=draft">Draft</a></li>
+                    <li><a class="dropdown-item" href="?status=archived">Archived</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Last Modified</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for design in designs %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'designs:design_detail' design.design_id %}" class="text-decoration-none">
+                                    {{ design.name }}
+                                </a>
+                            </td>
+                            <td>
+                                <span class="badge bg-{{ design.status|lower }}">
+                                    {{ design.get_status_display }}
+                                </span>
+                            </td>
+                            <td>{{ design.date_created|date:"M d, Y" }}</td>
+                            <td>{{ design.last_modified|date:"M d, Y" }}</td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{% url 'designs:design_edit' design.design_id %}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <button type="button" 
+                                            class="btn btn-sm btn-outline-danger" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#deleteModal{{ design.id }}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-4">
+                                <p class="mb-0 text-muted">No designs yet. Get started by creating your first design!</p>
+                                <a href="{% url 'designs:design_create' %}" class="btn btn-primary mt-3">
+                                    Create Design
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modals -->
+{% for design in designs %}
+<div class="modal fade" id="deleteModal{{ design.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Design</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete "{{ design.name }}"? This action cannot be undone.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{% url 'designs:design_delete' design.design_id %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

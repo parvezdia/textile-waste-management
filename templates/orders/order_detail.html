@@ -1,0 +1,257 @@
+{% extends 'base.html' %}
+
+{% block title %}Order #{{ order.order_id }} - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h2>Order #{{ order.order_id }}</h2>
+    </div>
+    <div class="col-auto">
+        {% if order.status == 'PENDING' %}
+            {% if user.user_type == 'DESIGNER' and user.designer == order.design.designer %}
+                <div class="btn-group">
+                    <button type="button" class="btn btn-success" onclick="acceptOrder('{{ order.order_id }}')">
+                        Accept Order
+                    </button>
+                    <button type="button" class="btn btn-danger" onclick="rejectOrder('{{ order.order_id }}')">
+                        Reject Order
+                    </button>
+                </div>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <!-- Order Details Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Order Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Status</h6>
+                        <span class="badge bg-{{ order.status|lower }} fs-6">
+                            {{ order.get_status_display }}
+                        </span>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Order Date</h6>
+                        <p>{{ order.created_at|date:"F j, Y" }}</p>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Buyer</h6>
+                        <p>{{ order.buyer.user.get_full_name }}</p>
+                        <p class="text-muted">{{ order.buyer.user.email }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Designer</h6>
+                        <p>{{ order.design.designer.user.get_full_name }}</p>
+                        <p class="text-muted">{{ order.design.designer.user.email }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Design Details Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Design Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        {% if order.design.image %}
+                            <img src="{{ order.design.image.url }}" alt="{{ order.design.name }}" 
+                                 class="img-fluid rounded">
+                        {% endif %}
+                    </div>
+                    <div class="col-md-8">
+                        <h4>{{ order.design.name }}</h4>
+                        <p class="text-muted">{{ order.design.description }}</p>
+                        <div class="row mt-3">
+                            <div class="col-6">
+                                <h6 class="text-muted">Category</h6>
+                                <p>{{ order.design.category }}</p>
+                            </div>
+                            <div class="col-6">
+                                <h6 class="text-muted">Style</h6>
+                                <p>{{ order.design.style }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Notes -->
+        {% if order.notes %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Order Notes</h5>
+                </div>
+                <div class="card-body">
+                    {{ order.notes|linebreaks }}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="col-md-4">
+        <!-- Order Summary Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Order Summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-3">
+                    <span>Design Price</span>
+                    <span>${{ order.design.price }}</span>
+                </div>
+                {% if order.additional_charges %}
+                    <div class="d-flex justify-content-between mb-3">
+                        <span>Additional Charges</span>
+                        <span>${{ order.additional_charges }}</span>
+                    </div>
+                {% endif %}
+                <hr>
+                <div class="d-flex justify-content-between mb-3">
+                    <strong>Total Amount</strong>
+                    <strong>${{ order.total_amount }}</strong>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Timeline -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Order Timeline</h5>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-success"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-0">Order Placed</h6>
+                            <small class="text-muted">{{ order.created_at|date:"M j, Y H:i" }}</small>
+                        </div>
+                    </div>
+
+                    {% if order.accepted_at %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-primary"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-0">Order Accepted</h6>
+                                <small class="text-muted">{{ order.accepted_at|date:"M j, Y H:i" }}</small>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    {% if order.rejected_at %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-danger"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-0">Order Rejected</h6>
+                                <small class="text-muted">{{ order.rejected_at|date:"M j, Y H:i" }}</small>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    {% if order.completed_at %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-success"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-0">Order Completed</h6>
+                                <small class="text-muted">{{ order.completed_at|date:"M j, Y H:i" }}</small>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.timeline {
+    position: relative;
+    padding: 0;
+    list-style: none;
+}
+
+.timeline-item {
+    position: relative;
+    padding-left: 40px;
+    margin-bottom: 25px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+}
+
+.timeline-item:not(:last-child):before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 20px;
+    height: calc(100% + 5px);
+    width: 2px;
+    background-color: #e9ecef;
+}
+
+.timeline-content {
+    padding-bottom: 5px;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function acceptOrder(orderId) {
+        if (confirm('Are you sure you want to accept this order?')) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/orders/${orderId}/accept/`;
+            
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            
+            form.appendChild(csrfInput);
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+
+    function rejectOrder(orderId) {
+        if (confirm('Are you sure you want to reject this order?')) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = `/orders/${orderId}/reject/`;
+            
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            
+            form.appendChild(csrfInput);
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+</script>
+{% endblock %}

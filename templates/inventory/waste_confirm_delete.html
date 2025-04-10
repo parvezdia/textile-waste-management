@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Waste - {{ waste.waste_id }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body text-center p-5">
+                    <div class="text-danger mb-4">
+                        <i class="fas fa-exclamation-triangle fa-3x"></i>
+                    </div>
+                    <h3 class="mb-4">Confirm Deletion</h3>
+                    <p class="mb-4">
+                        Are you sure you want to delete waste item <strong>{{ waste.waste_id }}</strong>?<br>
+                        This action cannot be undone.
+                    </p>
+                    
+                    <!-- Item Details -->
+                    <div class="bg-light rounded p-3 mb-4 text-start">
+                        <div class="row">
+                            <div class="col-sm-6">
+                                <small class="text-muted">Type:</small>
+                                <p class="mb-2">{{ waste.type }}</p>
+                            </div>
+                            <div class="col-sm-6">
+                                <small class="text-muted">Material:</small>
+                                <p class="mb-2">{{ waste.material }}</p>
+                            </div>
+                            <div class="col-sm-6">
+                                <small class="text-muted">Quantity:</small>
+                                <p class="mb-2">{{ waste.quantity }} {{ waste.unit }}</p>
+                            </div>
+                            <div class="col-sm-6">
+                                <small class="text-muted">Status:</small>
+                                <p class="mb-0">
+                                    <span class="badge {% if waste.status == 'AVAILABLE' %}bg-success
+                                               {% elif waste.status == 'PENDING_REVIEW' %}bg-warning
+                                               {% elif waste.status == 'RESERVED' %}bg-info
+                                               {% elif waste.status == 'USED' %}bg-secondary
+                                               {% else %}bg-danger{% endif %}">
+                                        {{ waste.get_status_display }}
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'inventory:waste_detail' waste.waste_id %}" class="btn btn-light">
+                                Cancel
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                Delete Waste Item
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

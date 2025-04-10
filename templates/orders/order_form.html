@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if order %}Edit Order #{{ order.order_id }}{% else %}Create Order{% endif %} - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2>{% if order %}Edit Order #{{ order.order_id }}{% else %}Create Order{% endif %}</h2>
+    </div>
+    <div class="col-md-4 text-end">
+        {% if order %}
+            <a href="{% url 'orders:order_detail' order.order_id %}" class="btn btn-secondary">Back to Order</a>
+        {% else %}
+            <a href="{% url 'designs:design_detail' design.design_id %}" class="btn btn-secondary">Back to Design</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5>Design Details</h5>
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            {% if design.image %}
+                                                <img src="{{ design.image.url }}" class="img-fluid rounded" alt="{{ design.name }}">
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-8">
+                                            <h6>{{ design.name }}</h6>
+                                            <p class="small text-muted">{{ design.description }}</p>
+                                            <p class="mb-0"><strong>Designer:</strong> {{ design.designer.user.get_full_name }}</p>
+                                            <p><strong>Base Price:</strong> ${{ design.base_price }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Required Materials</h5>
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <ul class="list-unstyled mb-0">
+                                        {% for material in design.required_materials.all %}
+                                            <li class="mb-2">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <span>{{ material.material }}</span>
+                                                    <span class="badge bg-secondary">{{ material.quantity }} units</span>
+                                                </div>
+                                                {% if material.waste_item %}
+                                                    <small class="text-muted d-block">
+                                                        From: {{ material.waste_item.factory.factory_details.factory_name }}
+                                                    </small>
+                                                {% endif %}
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if design.customization_options %}
+                    <h5 class="mb-3">Customization Options</h5>
+                    {% for field_name, field in form.items %}
+                        {% if field_name in design.customization_options %}
+                        <div class="mb-3">
+                            <label for="{{ field.id_for_label }}" class="form-label">
+                                {{ design.customization_options|get_item:field_name|get_item:'label' }}
+                            </label>
+                            {{ field }}
+                            {% if field.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {% for error in field.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            {% if design.customization_options|get_item:field_name|get_item:'help_text' %}
+                                <div class="form-text">
+                                    {{ design.customization_options|get_item:field_name|get_item:'help_text' }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label for="{{ form.notes.id_for_label }}" class="form-label">Additional Notes</label>
+                        {{ form.notes }}
+                        {% if form.notes.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.notes.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">Add any special instructions or notes for the designer.</div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Estimated Total</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="text" class="form-control" value="{{ design.base_price }}" readonly>
+                                </div>
+                                <div class="form-text">Final price may vary based on customizations.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        {% if order %}
+                            <button type="submit" class="btn btn-primary">Update Order</button>
+                        {% else %}
+                            <button type="submit" class="btn btn-primary">Place Order</button>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Order Summary</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-4">
+                    <li class="d-flex justify-content-between mb-2">
+                        <span>Base Price:</span>
+                        <span>${{ design.base_price }}</span>
+                    </li>
+                    {% if design.customization_options %}
+                        <li class="d-flex justify-content-between mb-2">
+                            <span>Customization:</span>
+                            <span>Variable</span>
+                        </li>
+                    {% endif %}
+                    <li class="d-flex justify-content-between mb-2 border-top pt-2">
+                        <strong>Estimated Total:</strong>
+                        <strong>${{ design.base_price }}</strong>
+                    </li>
+                </ul>
+
+                <div class="alert alert-info mb-0">
+                    <h6 class="alert-heading">Important Notes:</h6>
+                    <ul class="mb-0 ps-3">
+                        <li>Final price may vary based on customizations</li>
+                        <li>Payment will be processed after order confirmation</li>
+                        <li>Delivery timeline will be provided after order acceptance</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Add any JavaScript for dynamic price calculation based on customizations here
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize form fields with Bootstrap validation classes
+        const form = document.querySelector('form');
+        Array.from(form.elements).forEach(element => {
+            if (element.type !== 'hidden' && element.type !== 'submit') {
+                element.classList.add('form-control');
+                if (element.required) {
+                    element.classList.add('required');
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

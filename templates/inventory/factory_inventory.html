@@ -1,0 +1,243 @@
+{% extends 'base.html' %}
+
+{% block title %}Factory Inventory - TFWMS{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">My Inventory</h2>
+            <p class="text-muted mb-0">{{ user.factorypartner.factory_details.factory_name }}</p>
+            <p class="text-muted small mb-0">{{ user.factorypartner.factory_details.location }}</p>
+        </div>
+        <div>
+            <a href="{% url 'inventory:upload_waste' %}" class="btn btn-success">
+                <i class="fas fa-plus-circle me-2"></i>Upload New Waste
+            </a>
+        </div>
+    </div>
+
+    <!-- Capacity Overview -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-md-3">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Storage Capacity</h6>
+                    <div class="d-flex align-items-baseline mb-2">
+                        <h3 class="mb-0 me-2">{{ user.factorypartner.factory_details.get_capacity_percentage|floatformat:1 }}%</h3>
+                        <span class="text-muted">used</span>
+                    </div>
+                    <div class="progress" style="height: 4px;">
+                        <div class="progress-bar {% if user.factorypartner.factory_details.get_capacity_percentage > 90 %}bg-danger
+                                            {% elif user.factorypartner.factory_details.get_capacity_percentage > 75 %}bg-warning
+                                            {% else %}bg-success{% endif %}"
+                             role="progressbar" 
+                             style="width: {{ user.factorypartner.factory_details.get_capacity_percentage }}%">
+                        </div>
+                    </div>
+                    <small class="text-muted">{{ user.factorypartner.factory_details.get_current_capacity_usage|floatformat:1 }} / {{ user.factorypartner.factory_details.production_capacity }} kg</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-md-3">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Available Items</h6>
+                    <div class="d-flex align-items-center">
+                        <h3 class="mb-0">{{ metrics.total_items }}</h3>
+                        <i class="fas fa-boxes ms-auto text-success opacity-50 fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-md-3">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Total Weight</h6>
+                    <div class="d-flex align-items-center">
+                        <h3 class="mb-0">{{ metrics.total_quantity|floatformat:1 }} kg</h3>
+                        <i class="fas fa-weight-scale ms-auto text-info opacity-50 fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-md-3">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h6 class="text-muted">Pending Review</h6>
+                    <div class="d-flex align-items-center">
+                        <h3 class="mb-0">{{ metrics.pending_review }}</h3>
+                        <i class="fas fa-clock ms-auto text-warning opacity-50 fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Capacity Analysis -->
+    {% if metrics.efficiency and metrics.recommended_capacity %}
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Capacity Analysis</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-sm-6 mb-3">
+                            <label class="text-muted d-block">Storage Utilization</label>
+                            <div class="progress mb-2" style="height: 8px;">
+                                <div class="progress-bar bg-primary" role="progressbar" 
+                                     style="width: {{ metrics.efficiency.storage_utilization }}%">
+                                </div>
+                            </div>
+                            <small class="text-muted">{{ metrics.efficiency.storage_utilization|floatformat:1 }}% of capacity used</small>
+                        </div>
+                        <div class="col-sm-6 mb-3">
+                            <label class="text-muted d-block">Monthly Turnover Rate</label>
+                            <h4 class="mb-0">{{ metrics.efficiency.turnover_rate|floatformat:1 }}%</h4>
+                            <small class="text-muted">Items processed per month</small>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="text-muted d-block">Average Storage Time</label>
+                            <h4 class="mb-0">{{ metrics.efficiency.avg_days_in_storage|floatformat:0 }} days</h4>
+                            <small class="text-muted">Before processing</small>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="text-muted d-block">Recommended Capacity</label>
+                            <h4 class="mb-0">{{ metrics.recommended_capacity|floatformat:0 }} kg</h4>
+                            <small class="text-muted">Based on usage patterns</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Status Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Status</th>
+                                    <th class="text-end">Items</th>
+                                    <th class="text-end">Weight (kg)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for status, quantity in metrics.efficiency.capacity_breakdown.items %}
+                                <tr>
+                                    <td>
+                                        <span class="badge {% if status == 'AVAILABLE' %}bg-success
+                                                       {% elif status == 'PENDING_REVIEW' %}bg-warning
+                                                       {% elif status == 'RESERVED' %}bg-info
+                                                       {% elif status == 'USED' %}bg-secondary
+                                                       {% else %}bg-danger{% endif %}">
+                                            {{ status }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end">{{ quantity.count }}</td>
+                                    <td class="text-end">{{ quantity.total|floatformat:1 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Waste Items Table -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">Inventory Items</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0" id="wasteTable">
+                <thead class="table-light">
+                    <tr>
+                        <th>Waste ID</th>
+                        <th>Type</th>
+                        <th>Material</th>
+                        <th>Quantity</th>
+                        <th>Status</th>
+                        <th>Added Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for waste in wastes %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'inventory:waste_detail' waste.waste_id %}" class="text-decoration-none">
+                                {{ waste.waste_id }}
+                            </a>
+                        </td>
+                        <td>{{ waste.type }}</td>
+                        <td>{{ waste.material }}</td>
+                        <td>{{ waste.quantity }} {{ waste.unit }}</td>
+                        <td>
+                            <span class="badge {% if waste.status == 'AVAILABLE' %}bg-success
+                                           {% elif waste.status == 'PENDING_REVIEW' %}bg-warning
+                                           {% elif waste.status == 'RESERVED' %}bg-info
+                                           {% elif waste.status == 'USED' %}bg-secondary
+                                           {% else %}bg-danger{% endif %}">
+                                {{ waste.get_status_display }}
+                            </span>
+                        </td>
+                        <td>{{ waste.date_added|date:"M d, Y" }}</td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="{% url 'inventory:waste_detail' waste.waste_id %}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if waste.status == 'PENDING_REVIEW' %}
+                                <a href="{% url 'inventory:waste_edit' waste.waste_id %}" 
+                                   class="btn btn-sm btn-outline-success">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{% url 'inventory:waste_delete' waste.waste_id %}" 
+                                   class="btn btn-sm btn-outline-danger">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4">
+                            <div class="text-muted">
+                                <i class="fas fa-box-open fa-2x mb-3"></i>
+                                <p class="mb-0">No waste items found.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+    // Initialize DataTables
+    $(document).ready(function() {
+        $('#wasteTable').DataTable({
+            pageLength: 10,
+            order: [[5, 'desc']],
+            language: {
+                search: "Filter records:"
+            }
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}

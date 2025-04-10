@@ -1,0 +1,243 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+    .hero-section {
+        background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.7)), url('https://images.unsplash.com/photo-1581875403743-a3bf2cbed523?ixlib=rb-4.0.3');
+        background-size: cover;
+        background-position: center;
+        min-height: 100vh;
+        color: white;
+        position: relative;
+    }
+    .feature-card {
+        border: none;
+        transition: transform 0.3s ease;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    .feature-card:hover {
+        transform: translateY(-10px);
+    }
+    .feature-icon {
+        font-size: 2.5rem;
+        color: #198754;
+        background: rgba(25, 135, 84, 0.1);
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+    }
+    .navbar {
+        background: rgba(33, 37, 41, 0.95) !important;
+        backdrop-filter: blur(10px);
+    }
+    .btn-success {
+        padding: 0.8rem 2rem;
+        border-radius: 30px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: 600;
+    }
+    .stats-section {
+        background: #198754;
+        color: white;
+        padding: 4rem 0;
+    }
+    .stat-number {
+        font-size: 3rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    .testimonial-card {
+        background: #fff;
+        border-radius: 15px;
+        padding: 2rem;
+        margin: 1rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    .scroll-down {
+        position: absolute;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        animation: bounce 2s infinite;
+    }
+    @keyframes bounce {
+        0%, 20%, 50%, 80%, 100% {
+            transform: translateY(0);
+        }
+        40% {
+            transform: translateY(-30px);
+        }
+        60% {
+            transform: translateY(-15px);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Navigation -->
+<nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="#">
+            <i class="fas fa-recycle me-2"></i>TFWMS
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="#features">Features</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#stats">Impact</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#about">About</a>
+                </li>
+                <li class="nav-item ms-lg-3">
+                    <a class="nav-link btn btn-success px-4" href="{% url 'accounts:login' %}">Login</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Hero Section -->
+<section class="hero-section d-flex align-items-center text-center">
+    <div class="container">
+        <h1 class="display-3 fw-bold mb-4">Transform Textile Waste into Opportunity</h1>
+        <p class="lead mb-5">A revolutionary platform for sustainable textile waste management that helps your business reduce environmental impact while maximizing resources</p>
+        <div class="d-flex justify-content-center gap-3">
+            <a href="{% url 'accounts:register' %}" class="btn btn-success btn-lg">Get Started</a>
+            <a href="#features" class="btn btn-outline-light btn-lg">Learn More</a>
+        </div>
+    </div>
+    <div class="scroll-down text-white">
+        <i class="fas fa-chevron-down fa-2x"></i>
+    </div>
+</section>
+
+<!-- Stats Section -->
+<section id="stats" class="stats-section">
+    <div class="container">
+        <div class="row text-center">
+            <div class="col-md-4 mb-4 mb-md-0">
+                <div class="stat-number">90%</div>
+                <div>Waste Reduction</div>
+            </div>
+            <div class="col-md-4 mb-4 mb-md-0">
+                <div class="stat-number">1000+</div>
+                <div>Active Users</div>
+            </div>
+            <div class="col-md-4">
+                <div class="stat-number">50K</div>
+                <div>Tons Recycled</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section id="features" class="py-5">
+    <div class="container py-5">
+        <h2 class="text-center display-5 mb-5">Key Features</h2>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card feature-card h-100">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <h3 class="h4 mb-3">Real-time Tracking</h3>
+                        <p class="text-muted">Monitor your textile waste in real-time with our advanced tracking system</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card feature-card h-100">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon">
+                            <i class="fas fa-chart-pie"></i>
+                        </div>
+                        <h3 class="h4 mb-3">Analytics Dashboard</h3>
+                        <p class="text-muted">Make data-driven decisions with comprehensive analytics and reporting</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card feature-card h-100">
+                    <div class="card-body text-center p-4">
+                        <div class="feature-icon">
+                            <i class="fas fa-leaf"></i>
+                        </div>
+                        <h3 class="h4 mb-3">Sustainability Metrics</h3>
+                        <p class="text-muted">Track your environmental impact and sustainability achievements</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- About Section -->
+<section id="about" class="py-5 bg-light">
+    <div class="container py-5">
+        <div class="row align-items-center">
+            <div class="col-lg-6 mb-4 mb-lg-0">
+                <h2 class="display-5 mb-4">Revolutionizing Textile Waste Management</h2>
+                <p class="lead mb-4">Our system helps textile industries transition towards a circular economy by providing innovative solutions for waste management.</p>
+                <div class="d-flex flex-column gap-3">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-check-circle text-success me-3 fa-2x"></i>
+                        <div>Reduce operational costs and environmental impact</div>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-check-circle text-success me-3 fa-2x"></i>
+                        <div>Streamline waste collection and processing</div>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-check-circle text-success me-3 fa-2x"></i>
+                        <div>Generate detailed sustainability reports</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <img src="https://images.unsplash.com/photo-1581875403743-a3bf2cbed523?ixlib=rb-4.0.3" class="img-fluid rounded-3 shadow-lg" alt="Textile Industry">
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Call to Action -->
+<section class="py-5 bg-success text-white">
+    <div class="container text-center py-5">
+        <h2 class="display-5 mb-4">Ready to Get Started?</h2>
+        <p class="lead mb-4">Join thousands of businesses already transforming their textile waste management</p>
+        <a href="{% url 'accounts:register' %}" class="btn btn-light btn-lg">Sign Up Now</a>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer class="bg-dark text-light py-4">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6 text-center text-md-start">
+                <p class="mb-0">&copy; 2024 Textile Fabric Waste Management System</p>
+            </div>
+            <div class="col-md-6 text-center text-md-end">
+                <a href="#" class="text-light me-3"><i class="fab fa-facebook"></i></a>
+                <a href="#" class="text-light me-3"><i class="fab fa-twitter"></i></a>
+                <a href="#" class="text-light"><i class="fab fa-linkedin"></i></a>
+            </div>
+        </div>
+    </div>
+</footer>
+{% endblock %}

@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+
+{% block title %}Textile Waste Inventory - TFWMS{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2 class="mb-0">Textile Waste Inventory</h2>
+        </div>
+        <div class="col-md-4 text-md-end">
+            {% if user.factory_partner %}
+            <a href="{% url 'inventory:upload_waste' %}" class="btn btn-success">
+                <i class="fas fa-plus-circle me-2"></i>Upload New Waste
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All Status</option>
+                        {% for status_code, status_label in status_choices %}
+                        <option value="{{ status_code }}" {% if request.GET.status == status_code %}selected{% endif %}>
+                            {{ status_label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary">Apply Filters</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Waste Items List -->
+    <div class="card shadow">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Type</th>
+                        <th>Material</th>
+                        <th>Quantity</th>
+                        <th>Status</th>
+                        <th>Factory</th>
+                        <th>Date Added</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for waste in waste_items %}
+                    <tr>
+                        <td>{{ waste.waste_id }}</td>
+                        <td>{{ waste.type }}</td>
+                        <td>{{ waste.material }}</td>
+                        <td>{{ waste.quantity }} {{ waste.unit }}</td>
+                        <td>
+                            <span class="badge {% if waste.status == 'AVAILABLE' %}bg-success
+                                           {% elif waste.status == 'PENDING_REVIEW' %}bg-warning
+                                           {% elif waste.status == 'RESERVED' %}bg-info
+                                           {% elif waste.status == 'USED' %}bg-secondary
+                                           {% else %}bg-danger{% endif %}">
+                                {{ waste.get_status_display }}
+                            </span>
+                        </td>
+                        <td>{{ waste.factory.name }}</td>
+                        <td>{{ waste.date_added|date:"M d, Y" }}</td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="{% url 'inventory:waste_detail' waste.waste_id %}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if user.factory_partner == waste.factory %}
+                                <a href="{% url 'inventory:waste_edit' waste.waste_id %}" 
+                                   class="btn btn-sm btn-outline-success">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <a href="{% url 'inventory:waste_delete' waste.waste_id %}" 
+                                   class="btn btn-sm btn-outline-danger">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                                {% endif %}
+                                {% if perms.inventory.can_review_waste and waste.status == 'PENDING_REVIEW' %}
+                                <a href="{% url 'inventory:review_waste' waste.waste_id %}" 
+                                   class="btn btn-sm btn-outline-warning">
+                                    <i class="fas fa-clipboard-check"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4">
+                            <div class="text-muted">
+                                <i class="fas fa-box-open fa-2x mb-3"></i>
+                                <p>No waste items found.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if waste_items.has_other_pages %}
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if waste_items.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ waste_items.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Previous</a>
+            </li>
+            {% endif %}
+
+            {% for i in waste_items.paginator.page_range %}
+            <li class="page-item {% if waste_items.number == i %}active{% endif %}">
+                <a class="page-link" href="?page={{ i }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">{{ i }}</a>
+            </li>
+            {% endfor %}
+
+            {% if waste_items.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ waste_items.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">Next</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

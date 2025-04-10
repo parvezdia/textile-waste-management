@@ -1,0 +1,137 @@
+{% extends 'base.html' %}
+
+{% block title %}Profile - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0">Profile Information</h4>
+            </div>
+            <div class="card-body">
+                <h5>{{ user.username }}</h5>
+                <p class="text-muted">{{ user.get_user_type_display }}</p>
+                <hr>
+                <div class="mb-3">
+                    <strong>Email:</strong>
+                    <p>{{ user.email }}</p>
+                </div>
+                <div class="mb-3">
+                    <strong>Member Since:</strong>
+                    <p>{{ user.date_registered|date:"F j, Y" }}</p>
+                </div>
+                {% if user.contact_info %}
+                <div class="mb-3">
+                    <strong>Contact Information:</strong>
+                    <p>{{ user.contact_info.address }}</p>
+                    <p>{{ user.contact_info.phone }}</p>
+                    {% if user.contact_info.alternate_email %}
+                    <p>{{ user.contact_info.alternate_email }}</p>
+                    {% endif %}
+                </div>
+                {% endif %}
+                <a href="{% url 'accounts:profile_setup' %}" class="btn btn-primary">Edit Profile</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        {% if user.user_type == 'FACTORY' %}
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Factory Details</h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Factory Name:</strong>
+                        <p>{{ profile.factory_details.factory_name }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Location:</strong>
+                        <p>{{ profile.factory_details.location }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Production Capacity:</strong>
+                        <p>{{ profile.factory_details.production_capacity }}</p>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Certifications:</strong>
+                        <ul>
+                            {% for cert in profile.factory_details.certifications %}
+                                <li>{{ cert }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        {% elif user.user_type == 'DESIGNER' %}
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Designer Portfolio</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Statistics</h5>
+                            <p>Total Designs: {{ profile.portfolio.count }}</p>
+                            <p>Published Designs: {{ profile.portfolio.filter.status="PUBLISHED"|length }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Recent Designs</h5>
+                            {% for design in profile.portfolio.all|slice:":5" %}
+                                <div class="mb-2">
+                                    <a href="{% url 'designs:design_detail' design.design_id %}">{{ design.name }}</a>
+                                </div>
+                            {% empty %}
+                                <p>No designs yet</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% elif user.user_type == 'BUYER' %}
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Buyer Information</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Preferences</h5>
+                            <div class="mb-3">
+                                <strong>Preferred Materials:</strong>
+                                <ul>
+                                    {% for material in profile.preferences.preferred_materials %}
+                                        <li>{{ material }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            <div class="mb-3">
+                                <strong>Preferred Styles:</strong>
+                                <ul>
+                                    {% for style in profile.preferences.preferred_styles %}
+                                        <li>{{ style }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Recent Orders</h5>
+                            {% for order in profile.orders.all|slice:":5" %}
+                                <div class="mb-2">
+                                    <a href="{% url 'orders:order_detail' order.order_id %}">
+                                        Order #{{ order.order_id }} - {{ order.get_status_display }}
+                                    </a>
+                                </div>
+                            {% empty %}
+                                <p>No orders yet</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

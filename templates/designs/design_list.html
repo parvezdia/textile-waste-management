@@ -1,0 +1,199 @@
+{% extends 'base.html' %}
+
+{% block title %}Designs - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2>Designs</h2>
+    </div>
+    <div class="col-md-4 text-end">
+        {% if user.user_type == 'DESIGNER' %}
+            <a href="{% url 'designs:design_create' %}" class="btn btn-primary">Create New Design</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-4">
+                        <input type="text" name="search" class="form-control" placeholder="Search designs..." value="{{ request.GET.search }}">
+                    </div>
+                    <div class="col-md-3">
+                        <select name="material" class="form-select">
+                            <option value="">Filter by Material</option>
+                            {% for material in available_materials %}
+                                <option value="{{ material }}" {% if request.GET.material == material %}selected{% endif %}>
+                                    {{ material }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select name="designer" class="form-select">
+                            <option value="">Filter by Designer</option>
+                            {% for designer in available_designers %}
+                                <option value="{{ designer.id }}" {% if request.GET.designer == designer.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ designer.user.username }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-secondary w-100">Filter</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    {% for design in designs %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                {% if design.image %}
+                    <img src="{{ design.image.url }}" class="card-img-top" alt="{{ design.name }}">
+                {% endif %}
+                <div class="card-body">
+                    <h5 class="card-title">{{ design.name }}</h5>
+                    <h6 class="card-subtitle mb-2 text-muted">By {{ design.designer.user.username }}</h6>
+                    <p class="card-text">{{ design.description|truncatewords:30 }}</p>
+                    <div class="mb-2">
+                        <span class="badge bg-{{ design.status|lower }}">{{ design.get_status_display }}</span>
+                        {% if design.is_customizable %}
+                            <span class="badge bg-info">Customizable</span>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <strong>Required Materials:</strong>
+                        <ul class="list-unstyled">
+                            {% for material in design.required_materials.all %}
+                                <li>
+                                    <small>{{ material.material }} - {{ material.quantity }} units</small>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0">${{ design.price }}</h6>
+                        <div class="btn-group">
+                            <a href="{% url 'designs:design_detail' design.design_id %}" class="btn btn-sm btn-outline-primary">View Details</a>
+                            {% if user.designer == design.designer %}
+                                <a href="{% url 'designs:design_edit' design.design_id %}" class="btn btn-sm btn-outline-warning">Edit</a>
+                                <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ design.id }}">
+                                    Delete
+                                </button>
+                            {% elif user.user_type == 'BUYER' and design.status == 'PUBLISHED' %}
+                                <a href="{% url 'orders:create_order' design.design_id %}" class="btn btn-sm btn-success">Order</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if user.designer == design.designer %}
+        <!-- Delete Modal -->
+        <div class="modal fade" id="deleteModal{{ design.id }}" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Confirm Delete</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        Are you sure you want to delete the design "{{ design.name }}"?
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <form action="{% url 'designs:design_delete' design.design_id %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger">Delete</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info">
+                No designs found matching your criteria.
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+{% if designs.has_other_pages %}
+<nav aria-label="Design pagination" class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if designs.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ designs.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.material %}&material={{ request.GET.material }}{% endif %}{% if request.GET.designer %}&designer={{ request.GET.designer }}{% endif %}">
+                    Previous
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">Previous</span>
+            </li>
+        {% endif %}
+
+        {% for num in designs.paginator.page_range %}
+            {% if designs.number == num %}
+                <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+            {% else %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.material %}&material={{ request.GET.material }}{% endif %}{% if request.GET.designer %}&designer={{ request.GET.designer }}{% endif %}">
+                        {{ num }}
+                    </a>
+                </li>
+            {% endif %}
+        {% endfor %}
+
+        {% if designs.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ designs.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.material %}&material={{ request.GET.material }}{% endif %}{% if request.GET.designer %}&designer={{ request.GET.designer }}{% endif %}">
+                    Next
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">Next</span>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% block extra_js %}
+<script>
+    // Enable Bootstrap tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+
+    // Handle filter form submission
+    document.querySelector('form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const params = new URLSearchParams();
+        
+        for (const [key, value] of formData.entries()) {
+            if (value) {
+                params.append(key, value);
+            }
+        }
+        
+        window.location.search = params.toString();
+    });
+</script>
+{% endblock %}
+{% endblock %}

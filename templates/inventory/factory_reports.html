@@ -1,0 +1,218 @@
+{% extends 'base.html' %}
+
+{% block title %}Factory Reports - TFWMS{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'inventory:factory_inventory' %}">Factory Inventory</a></li>
+            <li class="breadcrumb-item active">Reports</li>
+        </ol>
+    </nav>
+
+    <!-- Factory Overview -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Your Items</h6>
+                    <h3 class="mb-0">{{ metrics.total_items }}</h3>
+                    <small class="text-muted">In inventory</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Total Weight</h6>
+                    <h3 class="mb-0">{{ metrics.total_quantity|floatformat:2 }} kg</h3>
+                    <small class="text-muted">Across all items</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Pending Review</h6>
+                    <h3 class="mb-0">{{ metrics.pending_review }}</h3>
+                    <small class="text-muted">Items awaiting approval</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="text-muted mb-2">Storage Usage</h6>
+                    <h3 class="mb-0">{{ efficiency_metrics.storage_utilization|floatformat:1 }}%</h3>
+                    <small class="text-muted">Of allocated capacity</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Analysis -->
+    <div class="card mb-4">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Monthly Analysis</h5>
+            <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-secondary active" data-period="3">3 Months</button>
+                <button class="btn btn-outline-secondary" data-period="6">6 Months</button>
+                <button class="btn btn-outline-secondary" data-period="12">12 Months</button>
+            </div>
+        </div>
+        <div class="card-body">
+            <canvas id="monthlyChart" height="300"></canvas>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Status Distribution -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Current Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Status</th>
+                                    <th class="text-end">Items</th>
+                                    <th class="text-end">Weight (kg)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for status in metrics.status_distribution %}
+                                <tr>
+                                    <td>
+                                        <span class="badge {% if status.status == 'AVAILABLE' %}bg-success
+                                                       {% elif status.status == 'PENDING_REVIEW' %}bg-warning
+                                                       {% elif status.status == 'RESERVED' %}bg-info
+                                                       {% elif status.status == 'USED' %}bg-secondary
+                                                       {% else %}bg-danger{% endif %}">
+                                            {{ status.status }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end">{{ status.count }}</td>
+                                    <td class="text-end">{{ status.total_quantity|floatformat:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Storage Metrics -->
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Storage Metrics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h6 class="text-muted">Storage Utilization</h6>
+                        <div class="progress" style="height: 10px;">
+                            <div class="progress-bar bg-success" role="progressbar" 
+                                 style="width: {{ efficiency_metrics.storage_utilization }}%">
+                            </div>
+                        </div>
+                        <small class="text-muted mt-2 d-block">{{ efficiency_metrics.storage_utilization|floatformat:1 }}% of your allocated storage capacity is being used</small>
+                    </div>
+                    <div class="mb-4">
+                        <h6 class="text-muted">Average Storage Time</h6>
+                        <div class="d-flex align-items-baseline">
+                            <h3 class="mb-0 me-2">{{ efficiency_metrics.avg_days_in_storage|floatformat:0 }}</h3>
+                            <span class="text-muted">days</span>
+                        </div>
+                        <small class="text-muted">Average time items spend in storage</small>
+                    </div>
+                    <div>
+                        <h6 class="text-muted">Monthly Turnover Rate</h6>
+                        <div class="d-flex align-items-baseline">
+                            <h3 class="mb-0 me-2">{{ efficiency_metrics.turnover_rate|floatformat:1 }}%</h3>
+                        </div>
+                        <small class="text-muted">Percentage of inventory used per month</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="d-flex justify-content-center gap-3">
+        <a href="{% url 'inventory:reports' %}" class="btn btn-primary">
+            <i class="fas fa-chart-line me-2"></i>Generate Detailed Report
+        </a>
+        <a href="{% url 'inventory:waste_list' %}" class="btn btn-outline-primary">
+            <i class="fas fa-list me-2"></i>View All Items
+        </a>
+    </div>
+</div>
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Monthly Trend Chart
+    const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+    const monthlyData = {
+        labels: {{ metrics.monthly_trend|safe }},
+        datasets: [{
+            label: 'Items Added',
+            data: {{ metrics.monthly_trend|safe }},
+            borderColor: '#0d6efd',
+            backgroundColor: 'rgba(13, 110, 253, 0.1)',
+            tension: 0.4,
+            fill: true
+        }]
+    };
+
+    const monthlyChart = new Chart(monthlyCtx, {
+        type: 'line',
+        data: monthlyData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        drawBorder: false
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+
+    // Period selector buttons
+    document.querySelectorAll('[data-period]').forEach(button => {
+        button.addEventListener('click', function(e) {
+            const months = parseInt(this.dataset.period);
+            // Update chart data based on selected period
+            // This would typically involve an API call to get the data
+            
+            document.querySelectorAll('[data-period]').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            this.classList.add('active');
+        });
+    });
+});
+</script>
+{% endblock %}
+
+{% endblock %}
