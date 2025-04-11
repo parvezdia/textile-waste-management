@@ -207,9 +207,10 @@ def profile_setup(request):
     elif user.user_type == "DESIGNER" and hasattr(user, "designer"):
         designer = user.designer
         contact_info = user.contact_info
+        # Only redirect if this is not an edit request
         if designer.is_approved and all([
             contact_info and contact_info.address and contact_info.phone
-        ]):
+        ]) and request.GET.get('edit') != 'true':
             return redirect("designs:designer_dashboard")
 
     if request.method == "POST":

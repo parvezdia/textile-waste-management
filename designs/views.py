@@ -116,9 +116,11 @@ def design_create(request):
         Design, 
         CustomizationOption,
         form=CustomizationOptionForm,
-        extra=1,
-        can_delete=True,
-        fields=['name', 'type', 'available_choices', 'price_impact']
+        extra=1,  # Show exactly 1 option by default
+        can_delete=False,  # Prevent deletion
+        max_num=1,  # Limit to exactly 1 option
+        validate_max=True,  # Enforce max_num
+        fields=['name', 'type', 'price_impact']
     )
     
     MaterialRequirementFormSet = forms.formset_factory(
@@ -247,9 +249,11 @@ def design_edit(request, design_id):
         Design,
         CustomizationOption,
         form=CustomizationOptionForm,
-        extra=1,
-        can_delete=True,
-        fields=['name', 'type', 'available_choices', 'price_impact']
+        extra=1,  # Show exactly 1 option by default
+        can_delete=False,  # Prevent deletion
+        max_num=1,  # Limit to exactly 1 option
+        validate_max=True,  # Enforce max_num
+        fields=['name', 'type', 'price_impact']
     )
     
     MaterialRequirementFormSet = forms.formset_factory(

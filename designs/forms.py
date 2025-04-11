@@ -56,37 +56,55 @@ class DesignForm(forms.ModelForm):
 
 
 class CustomizationOptionForm(forms.ModelForm):
+    # Replace complex price_impact field with simple Yes/No choice
+    price_impact = forms.ChoiceField(
+        choices=[('Yes', 'Yes'), ('No', 'No')],
+        initial='No',
+        help_text="Will this customization option affect the price?"
+    )
+    
     class Meta:
         model = CustomizationOption
-        fields = ["name", "type", "available_choices", "price_impact"]
-        widgets = {
-            "available_choices": forms.Textarea(attrs={"rows": 3, "placeholder": "Enter choices as comma-separated values"}),
-            "price_impact": forms.Textarea(attrs={"rows": 3, "placeholder": "Enter as JSON: {\"choice\": price_change}"})
-        }
+        fields = ["name", "type", "price_impact"]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if not self.instance.pk:  # If this is a new instance
             self.instance.option_id = f"OPT_{uuid.uuid4().hex[:8]}"
-
-    def clean_available_choices(self):
-        choices = self.cleaned_data["available_choices"]
-        if isinstance(choices, str):
-            # Convert comma-separated string to list
-            choices = [choice.strip() for choice in choices.split(',') if choice.strip()]
-        return choices
-
+        
+        # Restrict option types to only Color and Size
+        self.fields['type'].choices = [
+            ("COLOR", "Color"),
+            ("SIZE", "Size"),
+        ]
+        
+        # If we have an existing instance with price_impact data, set the form field accordingly
+        if self.instance.pk and isinstance(self.instance.price_impact, dict):
+            self.initial['price_impact'] = 'Yes' if self.instance.price_impact.get('has_impact') else 'No'
+        
     def clean_price_impact(self):
-        impact = self.cleaned_data["price_impact"]
-        if isinstance(impact, str):
-            try:
-                import json
-                impact = json.loads(impact)
-            except json.JSONDecodeError:
-                raise forms.ValidationError("Invalid JSON format for price impact")
-        if not isinstance(impact, dict):
-            raise forms.ValidationError("Price impact must be a dictionary")
-        return impact
+        impact_choice = self.cleaned_data["price_impact"]
+        # Convert Yes/No to a simple dictionary format expected by the model
+        if impact_choice == 'Yes':
+            return {"has_impact": True}
+        else:
+            return {"has_impact": False}
+            
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        
+        # Set default available_choices based on option type
+        if not instance.available_choices or len(instance.available_choices) == 0:
+            if instance.type == "COLOR":
+                instance.available_choices = ["Red", "Blue", "Green", "Black", "White"]
+            elif instance.type == "SIZE":
+                instance.available_choices = ["Small", "Medium", "Large", "X-Large"]
+            else:
+                instance.available_choices = []
+        
+        if commit:
+            instance.save()
+        return instance
 
 
 class ImageForm(forms.ModelForm):

@@ -154,8 +154,7 @@
                                     <div class="card">
                                         <div class="card-body">
                                             {{ option_form.id }}
-                                            <div class="row g-3">
-                                                <div class="col-md-4">
+                                            <div class="row g-3">                                                <div class="col-md-6">
                                                     <label for="{{ option_form.name.id_for_label }}" class="form-label">Option Name</label>
                                                     {{ option_form.name|addclass:"form-control" }}
                                                 </div>
@@ -164,34 +163,21 @@
                                                     {{ option_form.type|addclass:"form-select" }}
                                                 </div>
                                                 <div class="col-md-3">
-                                                    <label for="{{ option_form.available_choices.id_for_label }}" class="form-label">Available Choices</label>
-                                                    {{ option_form.available_choices|addclass:"form-control" }}
-                                                </div>
-                                                <div class="col-md-2">
                                                     <label for="{{ option_form.price_impact.id_for_label }}" class="form-label">Price Impact</label>
-                                                    {{ option_form.price_impact|addclass:"form-control" }}
-                                                </div>
-                                                <div class="col-md-12">
-                                                    {% if option_form.available_choices.help_text %}
-                                                        <small class="text-muted">{{ option_form.available_choices.help_text }}</small>
-                                                    {% endif %}
+                                                    {{ option_form.price_impact|addclass:"form-select" }}
+                                                </div>                                                <div class="col-md-12">
                                                     {% if option_form.price_impact.help_text %}
                                                         <small class="text-muted d-block">{{ option_form.price_impact.help_text }}</small>
                                                     {% endif %}
                                                 </div>
-                                                <div class="col-md-12 d-flex justify-content-end">
+                                                <div class="col-md-12 d-none">
                                                     {{ option_form.DELETE|addclass:"form-check-input" }}
-                                                    <label class="form-check-label ms-2">Delete</label>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            {% endfor %}
-                        </div>
-                        <button type="button" class="btn btn-outline-primary mb-3" id="add-option">
-                            Add Option
-                        </button>
+                            {% endfor %}                        </div>
                     </div>
 
                     <div class="d-flex justify-content-between mt-4">
@@ -292,15 +278,9 @@
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize Select2
         initializeSelect2();
-        
-        // Material formset handling
+          // Material formset handling
         document.getElementById('add-material').addEventListener('click', () => {
             addFormsetForm('materials');
-        });
-
-        // Option formset handling
-        document.getElementById('add-option').addEventListener('click', () => {
-            addFormsetForm('options');
         });
 
         // Delete button handlers

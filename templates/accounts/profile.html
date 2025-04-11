@@ -29,9 +29,8 @@
                     {% if user.contact_info.alternate_email %}
                     <p>{{ user.contact_info.alternate_email }}</p>
                     {% endif %}
-                </div>
-                {% endif %}
-                <a href="{% url 'accounts:profile_setup' %}" class="btn btn-primary">Edit Profile</a>
+                </div>                {% endif %}
+                <a href="{% url 'accounts:profile_setup' %}?edit=true" class="btn btn-primary">Edit Profile</a>
             </div>
         </div>
     </div>
