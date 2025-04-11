@@ -53,7 +53,31 @@ class Design(models.Model):
         return total_cost
 
     def is_customizable(self):
-        return self.customization_options.exists()
+        return self.customization_options.exists()    
+    def get_available_quantity(self):
+        """
+        Calculate maximum available quantity based on required materials.
+        Returns the minimum available quantity across all required materials.
+        """
+        available_quantities = []
+        
+        # Consider these statuses as indicating material is available
+        available_statuses = ["AVAILABLE", "PENDING_REVIEW", "RESERVED"]
+        
+        # Include all materials that have any usable status
+        for material in self.required_materials.filter(status__in=available_statuses).all():
+            # For each material, calculate how many designs can be made
+            # based on material quantity available
+            if material.quantity > 0:
+                available_quantities.append(int(material.quantity))
+        
+        # If we have no materials or no available quantities, return 12 as default
+        # You can adjust this default value as needed for your application
+        if not available_quantities:
+            return 12
+        
+        # Return the minimum available quantity (the limiting factor)
+        return min(available_quantities)
 
     def __str__(self):
         return f"{self.name} ({self.design_id})"

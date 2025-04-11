@@ -87,11 +87,18 @@
                            href="{% url 'designs:design_list' %}">Designs</a>
                     </li>
                     {% endif %}
-                    
-                    {% if user.is_authenticated and user.user_type == 'BUYER' %}
+                      {% if user.is_authenticated and user.user_type == 'BUYER' %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'designs' in request.path and request.resolver_match.url_name == 'design_list' %}active{% endif %}" 
+                           href="{% url 'designs:design_list' %}">
+                           <i class="fas fa-tshirt me-1"></i>Designs
+                        </a>
+                    </li>
                     <li class="nav-item">
                         <a class="nav-link {% if 'orders' in request.path %}active{% endif %}" 
-                           href="{% url 'orders:order_list' %}">Orders</a>
+                           href="{% url 'orders:order_list' %}">
+                           <i class="fas fa-shopping-cart me-1"></i>Orders
+                        </a>
                     </li>
                     {% endif %}
                     

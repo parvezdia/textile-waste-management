@@ -71,11 +71,11 @@ class Order(models.Model):
         ("SHIPPED", "Shipped"),
         ("DELIVERED", "Delivered"),
         ("CANCELED", "Canceled"),
-    ]
-
+    ]    
     order_id = models.CharField(max_length=100, unique=True)
     buyer = models.ForeignKey("accounts.Buyer", on_delete=models.CASCADE)
     design = models.ForeignKey("designs.Design", on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(default=1)
     customizations = models.JSONField(default=dict)  # Map of customization options
     status = models.CharField(
         max_length=20, choices=ORDER_STATUS_CHOICES, default="PENDING"
@@ -83,16 +83,17 @@ class Order(models.Model):
     date_ordered = models.DateTimeField(auto_now_add=True)
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
     payment_info = models.OneToOneField(PaymentInfo, on_delete=models.CASCADE)
-    delivery_info = models.OneToOneField(DeliveryInfo, on_delete=models.CASCADE)
-
+    delivery_info = models.OneToOneField(DeliveryInfo, on_delete=models.CASCADE)    
     def calculate_total_price(self):
         base_price = self.design.price
+        # Add customization price impacts
         for option, choice in self.customizations.items():
             option_obj = self.design.customization_options.get(name=option)
             if option_obj:
                 price_impact = option_obj.price_impact.get(choice, 0)
                 base_price += price_impact
-        return base_price
+        # Multiply by quantity
+        return base_price * self.quantity
 
     def update_status(self, status):
         self.status = status

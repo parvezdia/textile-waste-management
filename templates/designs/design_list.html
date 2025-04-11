@@ -60,14 +60,15 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <h6 class="mb-0">${{ design.price }}</h6>
                         <div class="btn-group">
-                            <a href="{% url 'designs:design_detail' design.design_id %}" class="btn btn-sm btn-outline-primary">View Details</a>
-                            {% if user.designer == design.designer %}
+                            <a href="{% url 'designs:design_detail' design.design_id %}" class="btn btn-sm btn-outline-primary">View Details</a>                            {% if user.designer == design.designer %}
                                 <a href="{% url 'designs:design_edit' design.design_id %}" class="btn btn-sm btn-outline-warning">Edit</a>
                                 <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ design.id }}">
                                     Delete
                                 </button>
-                            {% elif user.user_type == 'BUYER' and design.status == 'PUBLISHED' %}
-                                <a href="{% url 'orders:create_order' design.design_id %}" class="btn btn-sm btn-success">Order</a>
+                            {% elif user.user_type == 'BUYER' and design.status == 'PUBLISHED' %}                                {% if design.is_customizable %}
+                                    <a href="{% url 'designs:design_customize' design.design_id %}" class="btn btn-sm btn-outline-info">Customize</a>
+                                {% endif %}
+                                <a href="{% url 'orders:create_order' design.design_id %}" class="btn btn-sm btn-success" data-design-id="{{ design.design_id }}">Order</a>
                             {% endif %}
                         </div>
                     </div>

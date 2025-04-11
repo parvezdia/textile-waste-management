@@ -323,10 +323,12 @@ def design_edit(request, design_id):
                         factory=system_factory  # Add the factory reference here
                     )
                     design.required_materials.add(material)
-            
-            # Update customization options if enabled
+              # Update customization options based on is_customizable checkbox
             if form.cleaned_data.get('is_customizable', False):
                 options_formset.save()
+            else:
+                # Delete existing customization options if customization is disabled
+                design.customization_options.all().delete()
                 
             messages.success(request, "Design updated successfully!")
             return redirect("designs:design_detail", design_id=design.design_id)
@@ -370,3 +372,55 @@ def design_delete(request, design_id):
         messages.success(request, "Design deleted successfully!")
         return redirect("designs:design_list")
     return render(request, "designs/design_confirm_delete.html", {"design": design})
+
+
+@login_required
+def design_customize(request, design_id):
+    """
+    View for customizing a design before ordering.
+    This allows buyers to view and select customization options for a design.
+    """
+    # Get the design with related data
+    design = get_object_or_404(
+        Design.objects.select_related('designer').prefetch_related(
+            'required_materials__dimensions',
+            'customization_options'
+        ),
+        design_id=design_id,
+        status="PUBLISHED"  # Only published designs can be customized
+    )
+    
+    # Create a list to store selected customization choices
+    selected_options = {}
+    
+    if request.method == "POST":
+        # Process form submission with customization choices
+        form_valid = True
+        
+        # Collect all selected options from the form
+        for option in design.customization_options.all():
+            option_value = request.POST.get(f'option_{option.id}')
+            if option_value:
+                if option_value in option.choices:
+                    selected_options[option.name] = option_value
+                else:
+                    form_valid = False
+                    messages.error(request, f"Invalid selection for {option.name}")
+        
+        if form_valid:
+            # Store customization selections in session for the order process
+            request.session['design_customizations'] = {
+                'design_id': design_id,
+                'options': selected_options
+            }
+            messages.success(request, "Customizations saved! You can now proceed to order.")
+            return redirect('orders:create_order', design_id=design_id)
+    
+    # Get all customization options for this design
+    customization_options = design.customization_options.all()
+    
+    return render(request, "designs/design_customize.html", {
+        "design": design,
+        "customization_options": customization_options,
+        "selected_options": selected_options
+    })

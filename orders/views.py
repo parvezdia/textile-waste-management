@@ -42,7 +42,7 @@ def create_order(request, design_id=None):
         if all(
             [order_form.is_valid(), payment_form.is_valid(), delivery_form.is_valid()]
         ):
-            try:
+            try:                
                 with transaction.atomic():
                     payment = payment_form.save()
                     delivery = delivery_form.save()
@@ -50,6 +50,12 @@ def create_order(request, design_id=None):
                     order.buyer = request.user.buyer
                     order.payment_info = payment
                     order.delivery_info = delivery
+                    
+                    # Generate a unique order_id if not provided
+                    import uuid
+                    if not order.order_id:
+                        order.order_id = f"ORD-{uuid.uuid4().hex[:8].upper()}"
+                        
                     order.total_price = order.calculate_total_price()
                     order.save()
                 messages.success(request, "Order created successfully!")
@@ -63,9 +69,11 @@ def create_order(request, design_id=None):
         order_form = OrderForm(initial=initial_data)
         payment_form = PaymentInfoForm()
         delivery_form = DeliveryInfoForm()
-
+    
+    # Create context dictionary for both POST and GET requests
     context = {
-        "order_form": order_form,
+        "form": order_form,  # Template uses "form" not "order_form"
+        "order_form": order_form,  # Keep this for backward compatibility
         "payment_form": payment_form,
         "delivery_form": delivery_form,
     }

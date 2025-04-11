@@ -75,9 +75,8 @@
                                 <span class="badge bg-{{ order.status|lower }}">
                                     {{ order.get_status_display }}
                                 </span>
-                            </td>
-                            <td>{{ order.created_at|date:"M d, Y" }}</td>
-                            <td>${{ order.total_amount }}</td>
+                            </td>                            <td>{{ order.date_ordered|date:"M d, Y" }}</td>
+                            <td>${{ order.total_price }}</td>
                             <td class="text-end">
                                 <div class="btn-group">
                                     <a href="{% url 'orders:order_detail' order.order_id %}" 

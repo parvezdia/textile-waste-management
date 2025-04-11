@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+
+{% block title %}Customize {{ design.name }} - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>Customize {{ design.name }}</h2>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'designs:design_detail' design.design_id %}" class="btn btn-outline-secondary">Back to Design Details</a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-body">
+                    {% if design.image %}
+                        <img src="{{ design.image.url }}" class="img-fluid rounded mb-3" alt="{{ design.name }}">
+                    {% endif %}
+                    
+                    <h4 class="card-title">{{ design.name }}</h4>
+                    <h6 class="card-subtitle mb-2 text-muted">By {{ design.designer.user.username }}</h6>
+                    <p class="card-text">{{ design.description|truncatewords:50 }}</p>
+                    
+                    <div class="mb-3">
+                        <h5>Base Price: ${{ design.price }}</h5>
+                        <small class="text-muted">*Price may change based on customization options</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Customization Options</h4>
+                </div>
+                <div class="card-body">
+                    {% if customization_options %}
+                        <form method="post">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <p>Select your preferred options below:</p>
+                            </div>
+                            
+                            {% for option in customization_options %}
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">{{ option.name }} ({{ option.get_type_display }})</label>
+                                    <select name="option_{{ option.id }}" class="form-select">
+                                        <option value="">-- Select {{ option.name }} --</option>
+                                        {% for choice in option.choices %}
+                                            <option value="{{ choice }}" {% if selected_options.option.name == choice %}selected{% endif %}>
+                                                {{ choice }}
+                                                {% if option.price_impact.has_impact %}
+                                                    {% with price=option.additional_cost %}
+                                                        (+${{ price }})
+                                                    {% endwith %}
+                                                {% endif %}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            {% endfor %}
+                            
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary">Save Customizations & Continue to Order</button>
+                                <a href="{% url 'orders:create_order' design.design_id %}" class="btn btn-outline-secondary">Skip Customization</a>
+                            </div>
+                        </form>
+                    {% else %}
+                        <div class="alert alert-info">
+                            This design doesn't have any customization options.
+                        </div>
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'orders:create_order' design.design_id %}" class="btn btn-primary">Proceed to Order</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

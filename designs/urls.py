@@ -9,6 +9,7 @@ urlpatterns = [
     path("dashboard/", views.designer_dashboard, name="designer_dashboard"),
     path("create/", views.design_create, name="design_create"),
     path("<str:design_id>/", views.design_detail, name="design_detail"),
+    path("<str:design_id>/customize/", views.design_customize, name="design_customize"),
     path("<str:design_id>/edit/", views.design_edit, name="design_edit"),
     path("<str:design_id>/delete/", views.design_delete, name="design_delete"),
 ]
