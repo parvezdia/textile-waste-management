@@ -4,6 +4,7 @@ from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 from django import forms
 from django.forms import inlineformset_factory
+from django.db import models  # Add this import for Q objects
 import uuid
 
 from inventory.models import TextileWaste, Dimensions
@@ -13,10 +14,24 @@ from .models import Design, CustomizationOption
 
 
 def design_list(request):
-    designs = Design.objects.filter(status="PUBLISHED")
-    paginator = Paginator(designs, 12)  # Show 12 designs per page
+    # Start with base query for published designs
+    designs_query = Design.objects.filter(status="PUBLISHED")
+    
+    # Handle search functionality
+    search_query = request.GET.get('search', '')
+    if search_query:
+        # Search in name, description, and designer's username
+        designs_query = designs_query.filter(
+            models.Q(name__icontains=search_query) | 
+            models.Q(description__icontains=search_query) | 
+            models.Q(designer__user__username__icontains=search_query)
+        )
+    
+    # Paginate results
+    paginator = Paginator(designs_query, 12)  # Show 12 designs per page
     page = request.GET.get("page")
     designs = paginator.get_page(page)
+    
     return render(request, "designs/design_list.html", {"designs": designs})
 
 
@@ -65,14 +80,31 @@ def designer_dashboard(request):
     ]):
         messages.warning(request, "Please complete your profile setup to access the dashboard.")
         return redirect("accounts:profile_setup")
-      # Get all designs except deleted ones
-    designs = Design.objects.filter(designer__user=request.user).exclude(status="DELETED")
+    
+    # Base query - exclude deleted designs
+    base_designs = Design.objects.filter(designer__user=request.user).exclude(status="DELETED")
+    
+    # Handle status filtering
+    status_filter = request.GET.get('status', 'all')
+    if status_filter == 'published':
+        designs = base_designs.filter(status="PUBLISHED")
+    elif status_filter == 'draft':
+        designs = base_designs.filter(status="DRAFT")
+    elif status_filter == 'archived':
+        designs = base_designs.filter(status="ARCHIVED")
+    elif status_filter == 'pending_review':
+        designs = base_designs.filter(status="PENDING_REVIEW")
+    else:  # 'all' or any other value
+        designs = base_designs
+    
+    # Count statistics (using the base query to always show total counts)
     context = {
         "designs": designs,
-        "total_designs": designs.count(),
-        "published_designs": designs.filter(status="PUBLISHED").count(),
-        "draft_designs": designs.filter(status="DRAFT").count(),
-        "archived_designs": designs.filter(status="ARCHIVED").count(),
+        "total_designs": base_designs.count(),
+        "published_designs": base_designs.filter(status="PUBLISHED").count(),
+        "draft_designs": base_designs.filter(status="DRAFT").count(),
+        "archived_designs": base_designs.filter(status="ARCHIVED").count(),
+        "current_filter": status_filter,  # Track current filter for UI
     }
     return render(request, "designs/designer_dashboard.html", context)
 
@@ -257,7 +289,23 @@ def design_edit(request, design_id):
                         length=material_data['length'],
                         width=material_data['width'],
                         unit=material_data['unit']
-                    )
+                    )                    # Get a system factory to associate with the material
+                    from accounts.models import FactoryPartner
+                    system_factory = None
+                    try:
+                        # Try to find an existing system factory
+                        from django.contrib.auth import get_user_model
+                        User = get_user_model()
+                        system_user = User.objects.filter(username='system').first()
+                        if system_user:
+                            system_factory = FactoryPartner.objects.filter(user=system_user).first()
+                        
+                        # If no system factory exists, use the first available factory
+                        if not system_factory:
+                            system_factory = FactoryPartner.objects.first()
+                    except Exception as e:
+                        print(f"Error finding system factory: {str(e)}")
+                    
                     # Create material requirement
                     material = TextileWaste.objects.create(
                         waste_id=f"DESIGN_REQ_{uuid.uuid4().hex[:8]}",
@@ -267,7 +315,8 @@ def design_edit(request, design_id):
                         color=material_data.get('color'),
                         quality_grade=material_data['quality_grade'],
                         dimensions=dimensions,
-                        status="PENDING_REVIEW"
+                        status="PENDING_REVIEW",
+                        factory=system_factory  # Add the factory reference here
                     )
                     design.required_materials.add(material)
             

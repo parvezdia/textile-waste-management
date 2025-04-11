@@ -128,10 +128,9 @@
                     <div>
                         <h6 class="mb-1">{{ design.designer.user.username }}</h6>
                         <p class="mb-0 text-muted">{{ design.designer.designs.count }} Designs</p>
-                    </div>
-                </div>
+                    </div>                </div>
                 <p>{{ design.designer.bio }}</p>
-                <a href="#" class="btn btn-outline-primary btn-sm">View Profile</a>
+                <a href="{% url 'accounts:designer_profile' design.designer.id %}" class="btn btn-outline-primary btn-sm">View Profile</a>
             </div>
         </div>
 

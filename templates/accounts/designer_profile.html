@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ designer.user.username }} - Designer Profile{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <!-- Designer Info Card -->
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-body text-center">
+                    {% if designer.profile_image %}
+                        <img src="{{ designer.profile_image.url }}" class="rounded-circle mb-3" width="150" height="150" alt="{{ designer.user.username }}">
+                    {% else %}
+                        <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 150px; height: 150px;">
+                            <span class="display-4">{{ designer.user.username|first|upper }}</span>
+                        </div>
+                    {% endif %}
+                    
+                    <h3 class="card-title">{{ designer.user.username }}</h3>
+                    <p class="text-muted">Designer</p>
+                    
+                    {% if designer.is_approved %}
+                        <span class="badge bg-success mb-3">Verified Designer</span>
+                    {% endif %}
+                    
+                    <div class="d-flex justify-content-around my-4">
+                        <div class="text-center">
+                            <h4>{{ designs_count }}</h4>
+                            <p class="text-muted mb-0">Designs</p>
+                        </div>
+                    </div>
+
+                    {% if designer.contact_info %}
+                    <div class="contact-info mt-4 text-start">
+                        <h5>Contact Information</h5>
+                        {% if designer.user.contact_info.address %}
+                            <p><i class="fas fa-map-marker-alt me-2"></i>{{ designer.user.contact_info.address }}</p>
+                        {% endif %}
+                        {% if designer.user.contact_info.phone %}
+                            <p><i class="fas fa-phone me-2"></i>{{ designer.user.contact_info.phone }}</p>
+                        {% endif %}
+                        <p><i class="fas fa-envelope me-2"></i>{{ designer.user.email }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Designer Bio and Designs -->
+        <div class="col-md-8">
+            <!-- Bio Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">About</h5>
+                </div>
+                <div class="card-body">
+                    {% if designer.bio %}
+                        <p>{{ designer.bio }}</p>
+                    {% else %}
+                        <p class="text-muted">This designer hasn't added a bio yet.</p>
+                    {% endif %}
+
+                    {% if designer.specialization %}
+                        <h6>Specialization</h6>
+                        <p>{{ designer.specialization }}</p>
+                    {% endif %}
+
+                    {% if designer.experience %}
+                        <h6>Experience</h6>
+                        <p>{{ designer.experience }} years</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Designs Card -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Designs by {{ designer.user.username }}</h5>
+                </div>
+                <div class="card-body">
+                    {% if designs %}
+                        <div class="row">
+                            {% for design in designs %}
+                                <div class="col-md-6 col-lg-4 mb-4">
+                                    <div class="card h-100">
+                                        {% if design.image %}
+                                            <img src="{{ design.image.url }}" class="card-img-top" alt="{{ design.name }}">
+                                        {% endif %}
+                                        <div class="card-body">
+                                            <h5 class="card-title">{{ design.name }}</h5>
+                                            <p class="card-text">{{ design.description|truncatewords:10 }}</p>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="text-primary">${{ design.price }}</span>
+                                                <a href="{% url 'designs:design_detail' design.design_id %}" class="btn btn-sm btn-outline-primary">View Details</a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-center text-muted my-5">This designer hasn't published any designs yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

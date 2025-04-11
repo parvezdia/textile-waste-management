@@ -17,33 +17,12 @@
 <div class="row mb-4">
     <div class="col-12">
         <div class="card">
-            <div class="card-body">
-                <form method="get" class="row g-3">
-                    <div class="col-md-4">
+            <div class="card-body">                <form method="get" class="row g-3">
+                    <div class="col-md-10">
                         <input type="text" name="search" class="form-control" placeholder="Search designs..." value="{{ request.GET.search }}">
                     </div>
-                    <div class="col-md-3">
-                        <select name="material" class="form-select">
-                            <option value="">Filter by Material</option>
-                            {% for material in available_materials %}
-                                <option value="{{ material }}" {% if request.GET.material == material %}selected{% endif %}>
-                                    {{ material }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <select name="designer" class="form-select">
-                            <option value="">Filter by Designer</option>
-                            {% for designer in available_designers %}
-                                <option value="{{ designer.id }}" {% if request.GET.designer == designer.id|stringformat:"s" %}selected{% endif %}>
-                                    {{ designer.user.username }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
                     <div class="col-md-2">
-                        <button type="submit" class="btn btn-secondary w-100">Filter</button>
+                        <button type="submit" class="btn btn-secondary w-100">Search</button>
                     </div>
                 </form>
             </div>

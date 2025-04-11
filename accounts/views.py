@@ -165,11 +165,23 @@ def profile(request):
 
     except (ObjectDoesNotExist, AttributeError):
         messages.warning(request, "Please complete your profile setup")
-        return redirect("accounts:profile_setup")
-
-    return render(
-        request, "accounts/profile.html", {"user": user, "profile": profile_data}
-    )
+        return redirect("accounts:profile_setup")    # Prepare context for template
+    context = {
+        "user": user,
+        "profile": profile_data
+    }
+    
+    # Add specific data for designers
+    if user.user_type == "DESIGNER" and hasattr(profile_data, 'portfolio'):
+        # Count published designs
+        from designs.models import Design
+        published_designs_count = Design.objects.filter(
+            designer=profile_data,
+            status="PUBLISHED"
+        ).count()
+        context["published_designs_count"] = published_designs_count
+        
+    return render(request, "accounts/profile.html", context)
 
 
 @login_required
@@ -315,3 +327,27 @@ def profile_setup(request):
         "accounts/profile_setup.html",
         {"contact_form": contact_form, "profile_form": profile_form, "user": user},
     )
+
+
+def designer_profile(request, designer_id):
+    """View a designer's public profile."""
+    from accounts.models import Designer
+    from designs.models import Design
+    from django.shortcuts import get_object_or_404
+    
+    # Fetch the designer by their ID
+    designer = get_object_or_404(Designer, id=designer_id)
+    
+    # Get their published designs
+    designs = Design.objects.filter(
+        designer=designer, 
+        status="PUBLISHED"
+    ).order_by('-date_created')
+    
+    context = {
+        "designer": designer,
+        "designs": designs,
+        "designs_count": designs.count(),
+    }
+    
+    return render(request, "accounts/designer_profile.html", context)
