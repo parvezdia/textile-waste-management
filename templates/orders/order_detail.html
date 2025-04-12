@@ -30,7 +30,7 @@
             <div class="card-header">
                 <h5 class="card-title mb-0">Order Details</h5>
             </div>
-            <div class="card-body">
+            <div class="card-body">                
                 <div class="row mb-4">
                     <div class="col-md-6">
                         <h6 class="text-muted">Status</h6>
@@ -40,7 +40,7 @@
                     </div>
                     <div class="col-md-6">
                         <h6 class="text-muted">Order Date</h6>
-                        <p>{{ order.created_at|date:"F j, Y" }}</p>
+                        <p>{{ order.date_ordered|date:"F j, Y" }}</p>
                     </div>
                 </div>
 
@@ -74,15 +74,14 @@
                     </div>
                     <div class="col-md-8">
                         <h4>{{ order.design.name }}</h4>
-                        <p class="text-muted">{{ order.design.description }}</p>
-                        <div class="row mt-3">
+                        <p class="text-muted">{{ order.design.description }}</p>                        <div class="row mt-3">
                             <div class="col-6">
                                 <h6 class="text-muted">Category</h6>
-                                <p>{{ order.design.category }}</p>
+                                <p>{{ order.design.category.name|default:"N/A" }}</p>
                             </div>
                             <div class="col-6">
                                 <h6 class="text-muted">Style</h6>
-                                <p>{{ order.design.style }}</p>
+                                <p>{{ order.design.style|default:"N/A" }}</p>
                             </div>
                         </div>
                     </div>
@@ -103,27 +102,47 @@
         {% endif %}
     </div>
 
-    <div class="col-md-4">
-        <!-- Order Summary Card -->
+    <div class="col-md-4">        <!-- Order Summary Card -->
         <div class="card mb-4">
             <div class="card-header">
                 <h5 class="card-title mb-0">Order Summary</h5>
             </div>
             <div class="card-body">
                 <div class="d-flex justify-content-between mb-3">
-                    <span>Design Price</span>
+                    <span>Design Base Price</span>
                     <span>${{ order.design.price }}</span>
                 </div>
-                {% if order.additional_charges %}
-                    <div class="d-flex justify-content-between mb-3">
-                        <span>Additional Charges</span>
-                        <span>${{ order.additional_charges }}</span>
+                
+                {% if order.customizations %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span>Customizations</span>
+                        <span>
+                            {% comment %}Calculate customization cost manually if needed{% endcomment %}
+                        </span>
                     </div>
+                    <ul class="list-unstyled ps-3 small">
+                        {% for option, value in order.customizations.items %}
+                        <li>{{ option }}: {{ value }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
                 {% endif %}
+
+                <div class="d-flex justify-content-between mb-3">
+                    <span>Quantity</span>
+                    <span>{{ order.quantity }}</span>
+                </div>
+                
+                <div class="d-flex justify-content-between mb-3">
+                    <span>Unit Price</span>
+                    <span>${{ order.total_price|floatformat:2 }}</span>
+                </div>
+                
                 <hr>
                 <div class="d-flex justify-content-between mb-3">
                     <strong>Total Amount</strong>
-                    <strong>${{ order.total_amount }}</strong>
+                    <strong>${{ order.total_price|floatformat:2 }}</strong>
                 </div>
             </div>
         </div>

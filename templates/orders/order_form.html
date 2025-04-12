@@ -74,8 +74,7 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
-
+                    </div>                    
                     {% if design.customization_options %}
                     <h5 class="mb-3">Customization Options</h5>
                     {% for field_name, field in form.items %}
@@ -100,25 +99,23 @@
                         </div>
                         {% endif %}
                     {% endfor %}
-                    {% endif %}
-
+                    {% endif %}                    <!-- Hidden form field for customizations data with proper JSON format -->
+                    <input type="hidden" name="customizations" id="id_customizations" value='{"Bag": "Large"}'>
+                    
+                    <!-- Hidden form field for design with proper id attribute -->
+                    <input type="hidden" name="design" id="id_design" value="{{ design.id }}">
+                    
+                    <!-- Add a hidden input to ensure the form submits correctly -->
+                    <input type="hidden" name="submit_order" value="1"><!-- Notes field is removed as it's not in the OrderForm model -->
                     <div class="mb-3">
-                        <label for="{{ form.notes.id_for_label }}" class="form-label">Additional Notes</label>
-                        {{ form.notes }}
-                        {% if form.notes.errors %}
-                            <div class="invalid-feedback d-block">
-                                {% for error in form.notes.errors %}
-                                    {{ error }}
-                                {% endfor %}
-                            </div>
-                        {% endif %}
+                        <label for="notes" class="form-label">Additional Notes</label>
+                        <textarea name="notes" id="notes" class="form-control" rows="3"></textarea>
                         <div class="form-text">Add any special instructions or notes for the designer.</div>
-                    </div>                    
-                    <div class="row">
+                    </div>                    <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label for="{{ order_form.quantity.id_for_label }}" class="form-label">Quantity</label>
-                                {{ order_form.quantity }}
+                                <label for="quantity-input" class="form-label">Quantity</label>
+                                <input type="number" name="quantity" id="quantity-input" class="form-control" value="1" min="1" max="{{ design.get_available_quantity }}">
                                 {% if order_form.quantity.errors %}
                                     <div class="invalid-feedback d-block">
                                         {% for error in order_form.quantity.errors %}
@@ -127,7 +124,7 @@
                                     </div>
                                 {% endif %}
                             </div>
-                        </div>                        <div class="col-md-6">
+                        </div><div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Estimated Total</label>
                                 <h4 class="text-primary" id="estimated-total">${{ estimated_total|default:design.price }}</h4>
