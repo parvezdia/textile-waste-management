@@ -113,7 +113,8 @@
                             </div>
                         {% endif %}
                         <div class="form-text">Add any special instructions or notes for the designer.</div>
-                    </div>                    <div class="row">
+                    </div>                    
+                    <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="{{ order_form.quantity.id_for_label }}" class="form-label">Quantity</label>
@@ -126,12 +127,14 @@
                                     </div>
                                 {% endif %}
                             </div>
-                        </div>
-                        <div class="col-md-6">
+                        </div>                        <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Estimated Total</label>
-                                <h4 class="text-primary" id="estimated-total">${{ design.price }}</h4>
-                                <div class="form-text">Final price may vary based on customizations.</div>
+                                <h4 class="text-primary" id="estimated-total">${{ estimated_total|default:design.price }}</h4>
+                                <div class="form-text">
+                                    Base price: ${{ base_price }}
+                                    {% if customization_cost > 0 %} + ${{ customization_cost }} (customization){% endif %}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -146,9 +149,30 @@
                 </form>
             </div>
         </div>
-    </div>
-
-    <div class="col-md-4">        <div class="card">
+    </div>    <div class="col-md-4">
+        {% if selected_customizations %}
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0">Selected Customizations</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                {% for customization in selected_customizations %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ customization.name }}: <strong>{{ customization.value }}</strong>
+                        {% if customization.price_impact > 0 %}
+                            <span class="badge bg-primary rounded-pill">+${{ customization.price_impact }}</span>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+                </ul>
+                <div class="mt-3">
+                    <strong>Total Customization Cost:</strong> ${{ customization_cost }}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">Order Summary</h5>
             </div>
@@ -170,17 +194,19 @@
                         <span>Quantity:</span>
                         <span id="summary-quantity">1</span>
                     </li>
-                    {% if design.customization_options.all %}
+                    {% if customization_cost > 0 or design.customization_options %}
                         <li class="mb-2">
                             <div class="d-flex justify-content-between">
-                                <span>Customization Options:</span>
-                                <span id="customization-cost">$0.00</span>
+                                <span>Customization:</span>
+                                <span id="customization-cost">${{ customization_cost }}</span>
                             </div>
+                            {% if selected_customizations %}
                             <ul class="ps-3 mt-1 mb-0 small">
-                                {% for option in design.customization_options.all %}
-                                <li>{{ option.name }}: Available choices</li>
+                                {% for customization in selected_customizations %}
+                                <li>{{ customization.name }}: {{ customization.value }}</li>
                                 {% endfor %}
                             </ul>
+                            {% endif %}
                         </li>
                     {% endif %}
                     <li class="d-flex justify-content-between mb-2">
@@ -189,7 +215,7 @@
                     </li>
                     <li class="d-flex justify-content-between mb-2 border-top pt-2">
                         <strong>Estimated Total:</strong>
-                        <strong id="summary-total">${{ design.price }}</strong>
+                        <strong id="summary-total">${{ estimated_total|default:design.price }}</strong>
                     </li>
                 </ul>
 
@@ -218,51 +244,67 @@
                 if (element.required) {
                     element.classList.add('required');
                 }
-            }
-        });
-
-        // Handle dynamic price calculation based on quantity
-        const basePrice = {{ design.price }};
-        const quantityInput = document.getElementById('quantity-input');
+            }        });
+        
+        // Handle dynamic price calculation based on quantity and customizations
+        const basePrice = parseFloat({{ base_price|default:design.price }});
+        const customizationCost = parseFloat({{ customization_cost|default:0 }});
+        const unitPrice = basePrice + customizationCost; // Price with customizations for one unit
+          // Find the quantity input using multiple possible selectors
+        // Based on the form definition in orders/forms.py, it has id="quantity-input"
+        const quantityInput = document.getElementById('quantity-input') ||
+                             document.querySelector('input[name="quantity"]') ||
+                             document.getElementById('id_quantity');
+        
         const estimatedTotalElement = document.getElementById('estimated-total');
         const summaryQuantityElement = document.getElementById('summary-quantity');
         const summaryTotalElement = document.getElementById('summary-total');
+        const customizationCostElement = document.getElementById('customization-cost');
         
-        // Get maximum available quantity
+        console.log('Base Price:', basePrice);
+        console.log('Customization Cost:', customizationCost);
+        console.log('Unit Price:', unitPrice);
+        console.log('Found quantity input:', quantityInput ? 'Yes' : 'No');
+          // Get maximum available quantity
         const maxAvailableQuantity = {{ design.get_available_quantity }};
-        
-        // Function to update price based on quantity
-        function updatePrice() {
+          // Function to update price calculations
+        function updatePriceCalculations() {
             const quantity = parseInt(quantityInput.value) || 1;
             
             // Check if quantity is within valid range
             if (quantity < 1) {
                 quantityInput.value = 1;
-                return updatePrice();
+                return updatePriceCalculations();
             }
-              if (quantity > maxAvailableQuantity) {
+            
+            if (quantity > maxAvailableQuantity) {
                 quantityInput.value = maxAvailableQuantity;
                 // Only show alert if user tries to manually increase beyond max
                 if (document.activeElement === quantityInput) {
                     alert(`Only ${maxAvailableQuantity} unit(s) of this design are available.`);
                 }
-                return updatePrice();
+                return updatePriceCalculations();
             }
             
-            const totalPrice = (basePrice * quantity).toFixed(2);
+            // Calculate total price including customization costs
+            const totalPrice = (unitPrice * quantity).toFixed(2);
+            const totalCustomizationCost = (customizationCost * quantity).toFixed(2);
             
             // Update display elements
-            estimatedTotalElement.textContent = '$' + totalPrice;
-            summaryQuantityElement.textContent = quantity;
-            summaryTotalElement.textContent = '$' + totalPrice;
+            if (estimatedTotalElement) estimatedTotalElement.textContent = '$' + totalPrice;
+            if (summaryQuantityElement) summaryQuantityElement.textContent = quantity;
+            if (summaryTotalElement) summaryTotalElement.textContent = '$' + totalPrice;
+            if (customizationCostElement) customizationCostElement.textContent = '$' + totalCustomizationCost;
+            
+            console.log('Quantity updated to:', quantity);
+            console.log('New total price:', totalPrice);
         }
-        
-        // Add event listeners
-        quantityInput.addEventListener('input', updatePrice);
-        quantityInput.addEventListener('change', updatePrice);
+          // Add event listeners
+        quantityInput.addEventListener('input', updatePriceCalculations);
+        quantityInput.addEventListener('change', updatePriceCalculations);
         
         // Initialize with default values
-        updatePrice();
+        updatePriceCalculations();
         
         // Handle customization option changes (if applicable)
         const customizationSelects = document.querySelectorAll('select[name^="option_"]');
@@ -271,7 +313,7 @@
                 select.addEventListener('change', function() {
                     // This would be expanded to calculate additional costs from customizations
                     // For now we're just handling quantity changes
-                    updatePrice();
+                    updatePriceCalculations();
                 });
             });
         }
