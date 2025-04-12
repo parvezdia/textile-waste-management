@@ -30,11 +30,10 @@
             <div class="card-header">
                 <h5 class="card-title mb-0">Order Details</h5>
             </div>
-            <div class="card-body">                
-                <div class="row mb-4">
+            <div class="card-body">                  <div class="row mb-4">
                     <div class="col-md-6">
                         <h6 class="text-muted">Status</h6>
-                        <span class="badge bg-{{ order.status|lower }} fs-6">
+                        <span class="badge {% if order.status == 'PENDING' %}bg-warning{% elif order.status == 'CONFIRMED' %}bg-info{% elif order.status == 'IN_PRODUCTION' %}bg-primary{% elif order.status == 'READY_FOR_DELIVERY' %}bg-info{% elif order.status == 'SHIPPED' %}bg-primary{% elif order.status == 'DELIVERED' %}bg-success{% elif order.status == 'CANCELED' %}bg-danger{% else %}bg-secondary{% endif %} fs-6">
                             {{ order.get_status_display }}
                         </span>
                     </div>
@@ -100,6 +99,74 @@
                 </div>
             </div>
         {% endif %}
+
+        <!-- Payment Information -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Payment Information</h5>
+                <span class="badge {% if order.payment_info.status == 'PENDING' %}bg-warning{% elif order.payment_info.status == 'AUTHORIZED' %}bg-info{% elif order.payment_info.status == 'COMPLETED' %}bg-success{% elif order.payment_info.status == 'FAILED' %}bg-danger{% elif order.payment_info.status == 'REFUNDED' %}bg-secondary{% else %}bg-secondary{% endif %}">
+                    {{ order.payment_info.get_status_display }}
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Payment ID</h6>
+                        <p>{{ order.payment_info.payment_id }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Method</h6>
+                        <p>{{ order.payment_info.get_method_display }}</p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Amount</h6>
+                        <p>${{ order.payment_info.amount|floatformat:2 }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Transaction Date</h6>
+                        <p>{{ order.payment_info.transaction_date|date:"F j, Y H:i" }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delivery Information -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Delivery Information</h5>
+                <span class="badge {% if order.delivery_info.status == 'PROCESSING' %}bg-warning{% elif order.delivery_info.status == 'READY_FOR_PICKUP' %}bg-info{% elif order.delivery_info.status == 'IN_TRANSIT' %}bg-primary{% elif order.delivery_info.status == 'DELIVERED' %}bg-success{% elif order.delivery_info.status == 'FAILED' %}bg-danger{% elif order.delivery_info.status == 'RETURNED' %}bg-danger{% else %}bg-secondary{% endif %}">
+                    {{ order.delivery_info.get_status_display }}
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Tracking Number</h6>
+                        <p>{{ order.delivery_info.tracking_number }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Carrier</h6>
+                        <p>{{ order.delivery_info.carrier }}</p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Estimated Delivery</h6>
+                        <p>{{ order.delivery_info.estimated_delivery_date|date:"F j, Y" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Actual Delivery</h6>
+                        <p>{% if order.delivery_info.actual_delivery_date %}{{ order.delivery_info.actual_delivery_date|date:"F j, Y" }}{% else %}Pending{% endif %}</p>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <h6 class="text-muted">Delivery Address</h6>
+                    <p class="mb-0">{{ order.delivery_info.address|linebreaks }}</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="col-md-4">        <!-- Order Summary Card -->
