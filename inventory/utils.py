@@ -442,10 +442,10 @@ def calculate_sustainability_impact(report_data):
 def get_trends_analysis(start_date, end_date):
     """Analyze trends in waste collection"""
     waste_by_date = (
-        TextileWaste.objects.filter(created_at__range=(start_date, end_date))
-        .values("created_at__date")
-        .annotate(daily_total=Sum("weight"))
-        .order_by("created_at__date")
+        TextileWaste.objects.filter(date_added__range=(start_date, end_date))
+        .values("date_added__date")
+        .annotate(daily_total=Sum("quantity"))
+        .order_by("date_added__date")
     )
 
     # Convert to pandas for trend analysis

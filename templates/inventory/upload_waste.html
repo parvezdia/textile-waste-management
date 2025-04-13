@@ -56,14 +56,8 @@
                                 <div class="input-group">
                                     {{ waste_form.quantity }}
                                     {{ waste_form.unit }}
-                                </div>
-                                {% if waste_form.quantity.errors %}
+                                </div>                                {% if waste_form.quantity.errors %}
                                 <div class="invalid-feedback">{{ waste_form.quantity.errors.0 }}</div>
-                                {% endif %}
-                                {% if capacity_info.available > 0 %}
-                                <small class="text-muted">Available capacity: {{ capacity_info.available|floatformat:1 }} kg</small>
-                                {% else %}
-                                <small class="text-danger">No available capacity!</small>
                                 {% endif %}
                             </div>
                             <div class="col-md-6 mb-3">
@@ -135,63 +129,8 @@
                     </form>
                 </div>
             </div>
-        </div>
-
-        <!-- Capacity Information Sidebar -->
+        </div>        <!-- Information Sidebar -->
         <div class="col-lg-4">
-            <!-- Current Capacity Card -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0">Storage Capacity</h5>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <label class="text-muted d-block mb-2">Current Usage</label>
-                        <div class="progress" style="height: 8px;">
-                            <div class="progress-bar {% if capacity_info.usage_percentage > 90 %}bg-danger
-                                                 {% elif capacity_info.usage_percentage > 75 %}bg-warning
-                                                 {% else %}bg-success{% endif %}" 
-                                 role="progressbar"
-                                 style="width: {{ capacity_info.usage_percentage }}%">
-                            </div>
-                        </div>
-                        <small class="text-muted">{{ capacity_info.current_usage|floatformat:1 }} / {{ capacity_info.capacity }} kg</small>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="text-muted d-block">Available Space</label>
-                        <h4 class="mb-0">{{ capacity_info.available|floatformat:1 }} kg</h4>
-                        <small class="text-muted">Remaining storage capacity</small>
-                    </div>
-
-                    {% if capacity_info.recommended %}
-                    <div class="mb-3">
-                        <label class="text-muted d-block">Recommended Capacity</label>
-                        <h4 class="mb-0">{{ capacity_info.recommended|floatformat:0 }} kg</h4>
-                        <small class="text-muted">Based on historical usage patterns</small>
-                        
-                        {% if capacity_info.capacity < capacity_info.recommended %}
-                        <div class="alert alert-warning mt-2">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            Your current capacity might be insufficient based on your usage patterns.
-                            Consider requesting a capacity increase.
-                        </div>
-                        {% endif %}
-                    </div>
-                    {% endif %}
-
-                    {% if capacity_info.usage_percentage > 75 %}
-                    <div class="alert {% if capacity_info.usage_percentage > 90 %}alert-danger{% else %}alert-warning{% endif %} mb-0">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        {% if capacity_info.usage_percentage > 90 %}
-                        Storage capacity is nearly full! Please process existing waste before adding more.
-                        {% else %}
-                        Storage capacity is getting high. Consider processing some existing waste.
-                        {% endif %}
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
 
             <!-- Guidelines Card -->
             <div class="card shadow-sm">
@@ -238,19 +177,7 @@
                 form.classList.add('was-validated');
             }, false);
         });
-    })();
-
-    // Quantity validation against capacity
-    document.getElementById('{{ waste_form.quantity.id_for_label }}').addEventListener('input', function(e) {
-        const quantity = parseFloat(e.target.value) || 0;
-        const availableCapacity = {{ capacity_info.available }};
-        
-        if (quantity > availableCapacity) {
-            e.target.setCustomValidity(`Exceeds available capacity by ${(quantity - availableCapacity).toFixed(1)} kg`);
-        } else {
-            e.target.setCustomValidity('');
-        }
-    });
+    })();    // No quantity limit validation needed
 </script>
 {% endblock %}
 {% endblock %}

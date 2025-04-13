@@ -324,25 +324,47 @@ def factory_history(request):
 
 
 @login_required
-@permission_required("inventory.can_view_analytics")
 def inventory_analytics(request):
     """Analytics view showing detailed inventory insights"""
-    metrics = get_inventory_metrics(
-        factory=request.user.factorypartner
-        if hasattr(request.user, "factorypartner")
-        else None
-    )
-    efficiency_metrics = calculate_storage_efficiency(
-        factory=request.user.factorypartner
-        if hasattr(request.user, "factorypartner")
-        else None
-    )
-
-    return render(
-        request,
-        "inventory/analytics.html",
-        {"metrics": metrics, "efficiency_metrics": efficiency_metrics},
-    )
+    # For factory partners, show only their data
+    if hasattr(request.user, "factorypartner"):
+        metrics = get_inventory_metrics(factory=request.user.factorypartner)
+        efficiency_metrics = calculate_storage_efficiency(factory=request.user.factorypartner)
+        
+        # Get latest 90 days for trend analytics
+        end_date = timezone.now()
+        start_date = end_date - timedelta(days=90)
+          # Get trends analysis for this factory (filter the result afterwards)
+        trends_data = get_trends_analysis(start_date, end_date)
+        
+        # Get expiring inventory
+        expiring_soon = get_expiring_inventory(days=30, factory=request.user.factorypartner)
+        
+        return render(
+            request,
+            "inventory/analytics.html",
+            {
+                "metrics": metrics,
+                "efficiency_metrics": efficiency_metrics,
+                "trends": trends_data,
+                "expiring_soon": expiring_soon,
+                "factory_view": True
+            },
+        )
+    # For admin users with proper permissions, show all data
+    elif request.user.has_perm("inventory.can_view_analytics"):
+        metrics = get_inventory_metrics()
+        efficiency_metrics = calculate_storage_efficiency()
+        
+        return render(
+            request,
+            "inventory/analytics.html",
+            {"metrics": metrics, "efficiency_metrics": efficiency_metrics},
+        )
+    else:
+        # For other users without permission
+        messages.error(request, "You don't have permission to view analytics.")
+        return redirect("inventory:dashboard")
 
 
 @login_required
