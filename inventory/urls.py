@@ -17,7 +17,7 @@ urlpatterns = [
     # Reports and Analytics
     path("analytics/", views.inventory_analytics, name="analytics"),
     path("reports/", views.inventory_reports, name="reports"),
-    path("reports/generate/", views.generate_report, name="generate_report"),
+    # Removed the non-existent generate_report view
     path("reports/export/", views.export_report, name="export_report"),
     # Factory Views
     path("factory/inventory/", views.factory_inventory, name="factory_inventory"),

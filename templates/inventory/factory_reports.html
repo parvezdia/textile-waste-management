@@ -13,7 +13,7 @@
 
     <!-- Factory Overview -->
     <div class="row g-3 mb-4">
-        <div class="col-sm-6 col-xl-3">
+        <div class="col-sm-6 col-xl-4">
             <div class="card h-100">
                 <div class="card-body">
                     <h6 class="text-muted mb-2">Your Items</h6>
@@ -22,7 +22,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-sm-6 col-xl-3">
+        <div class="col-sm-6 col-xl-4">
             <div class="card h-100">
                 <div class="card-body">
                     <h6 class="text-muted mb-2">Total Weight</h6>
@@ -31,7 +31,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-sm-6 col-xl-3">
+        <div class="col-sm-6 col-xl-4">
             <div class="card h-100">
                 <div class="card-body">
                     <h6 class="text-muted mb-2">Pending Review</h6>
@@ -40,15 +40,7 @@
                 </div>
             </div>
         </div>
-        <div class="col-sm-6 col-xl-3">
-            <div class="card h-100">
-                <div class="card-body">
-                    <h6 class="text-muted mb-2">Storage Usage</h6>
-                    <h3 class="mb-0">{{ efficiency_metrics.storage_utilization|floatformat:1 }}%</h3>
-                    <small class="text-muted">Of allocated capacity</small>
-                </div>
-            </div>
-        </div>
+        <!-- Storage Usage card removed as requested -->
     </div>
 
     <!-- Monthly Analysis -->
@@ -68,7 +60,7 @@
 
     <div class="row">
         <!-- Status Distribution -->
-        <div class="col-lg-6 mb-4">
+        <div class="col-12 mb-4">
             <div class="card h-100">
                 <div class="card-header bg-white">
                     <h5 class="mb-0">Current Status</h5>
@@ -84,7 +76,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for status in metrics.status_distribution %}
+                                {% for status in status_distribution %}
                                 <tr>
                                     <td>
                                         <span class="badge {% if status.status == 'AVAILABLE' %}bg-success
@@ -105,41 +97,8 @@
                 </div>
             </div>
         </div>
-
-        <!-- Storage Metrics -->
-        <div class="col-lg-6 mb-4">
-            <div class="card h-100">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0">Storage Metrics</h5>
-                </div>
-                <div class="card-body">
-                    <div class="mb-4">
-                        <h6 class="text-muted">Storage Utilization</h6>
-                        <div class="progress" style="height: 10px;">
-                            <div class="progress-bar bg-success" role="progressbar" 
-                                 style="width: {{ efficiency_metrics.storage_utilization }}%">
-                            </div>
-                        </div>
-                        <small class="text-muted mt-2 d-block">{{ efficiency_metrics.storage_utilization|floatformat:1 }}% of your allocated storage capacity is being used</small>
-                    </div>
-                    <div class="mb-4">
-                        <h6 class="text-muted">Average Storage Time</h6>
-                        <div class="d-flex align-items-baseline">
-                            <h3 class="mb-0 me-2">{{ efficiency_metrics.avg_days_in_storage|floatformat:0 }}</h3>
-                            <span class="text-muted">days</span>
-                        </div>
-                        <small class="text-muted">Average time items spend in storage</small>
-                    </div>
-                    <div>
-                        <h6 class="text-muted">Monthly Turnover Rate</h6>
-                        <div class="d-flex align-items-baseline">
-                            <h3 class="mb-0 me-2">{{ efficiency_metrics.turnover_rate|floatformat:1 }}%</h3>
-                        </div>
-                        <small class="text-muted">Percentage of inventory used per month</small>
-                    </div>
-                </div>
-            </div>
-        </div>
+        
+        <!-- Storage Metrics section removed as requested -->
     </div>
 
     <!-- Action Buttons -->
@@ -157,29 +116,45 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Monthly Trend Chart
+    // Monthly Analysis Chart
     const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
-    const monthlyData = {
-        labels: {{ metrics.monthly_trend|safe }},
-        datasets: [{
-            label: 'Items Added',
-            data: {{ metrics.monthly_trend|safe }},
-            borderColor: '#0d6efd',
-            backgroundColor: 'rgba(13, 110, 253, 0.1)',
-            tension: 0.4,
-            fill: true
-        }]
-    };
-
+    
+    // Using the data passed from the view
+    const monthlyLabels = {{ monthly_labels|safe }};
+    const monthlyData = {{ monthly_data|safe }};
+    
     const monthlyChart = new Chart(monthlyCtx, {
         type: 'line',
-        data: monthlyData,
+        data: {
+            labels: monthlyLabels,
+            datasets: [{
+                label: 'Items Added',
+                data: monthlyData,
+                borderColor: '#0d6efd',
+                backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    display: false
+                    display: true,
+                    position: 'top'
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                        title: function(tooltipItems) {
+                            return 'Month: ' + tooltipItems[0].label;
+                        },
+                        label: function(context) {
+                            return 'Items Added: ' + context.raw;
+                        }
+                    }
                 }
             },
             scales: {
@@ -187,11 +162,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     beginAtZero: true,
                     grid: {
                         drawBorder: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Number of Items'
                     }
                 },
                 x: {
                     grid: {
                         display: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Month'
                     }
                 }
             }
@@ -200,11 +183,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Period selector buttons
     document.querySelectorAll('[data-period]').forEach(button => {
-        button.addEventListener('click', function(e) {
+        button.addEventListener('click', function() {
             const months = parseInt(this.dataset.period);
-            // Update chart data based on selected period
-            // This would typically involve an API call to get the data
             
+            // Update the chart to show the selected number of months
+            const updatedLabels = monthlyLabels.slice(-months);
+            const updatedData = monthlyData.slice(-months);
+            
+            monthlyChart.data.labels = updatedLabels;
+            monthlyChart.data.datasets[0].data = updatedData;
+            monthlyChart.update();
+            
+            // Update active button
             document.querySelectorAll('[data-period]').forEach(btn => {
                 btn.classList.remove('active');
             });

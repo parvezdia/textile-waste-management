@@ -171,6 +171,12 @@ def generate_waste_report(start_date, end_date, factory=None):
         "period": {"start": start_date, "end": end_date},
         "total_items": queryset.count(),
         "total_quantity": queryset.aggregate(total=Sum("quantity"))["total"] or 0,
+        "total_weight": queryset.aggregate(total=Sum("quantity"))["total"]
+        or 0,  # For compatibility
+        "avg_daily_intake": queryset.values("date_added__date")
+        .annotate(daily_total=Sum("quantity"))
+        .aggregate(Avg("daily_total"))["daily_total__avg"]
+        or 0,
         "status_breakdown": queryset.values("status").annotate(
             count=Count("id"), quantity=Sum("quantity")
         ),
@@ -189,6 +195,8 @@ def generate_waste_report(start_date, end_date, factory=None):
             ).count(),
             "low_impact": queryset.filter(sustainability_score__lt=50).count(),
         },
+        "items": queryset,
+        "waste_by_type": queryset.values("type").annotate(total=Sum("quantity")),
     }
 
     return report
@@ -276,11 +284,36 @@ def export_report_as_pdf(report_data):
     return pdf
 
 
-def export_report_as_excel(report_data):
-    """Export inventory report as Excel"""
-    from io import BytesIO
+def make_timezone_naive(data):
+    """Convert all timezone-aware datetime objects in a complex data structure to naive datetime objects"""
+    import copy
+    import datetime
 
+    # Make a deep copy to avoid modifying the original data
+    result = copy.deepcopy(data)
+
+    if isinstance(result, dict):
+        for key, value in result.items():
+            if hasattr(value, "tzinfo") and value.tzinfo is not None:
+                result[key] = value.replace(tzinfo=None)
+            elif isinstance(value, (dict, list)):
+                result[key] = make_timezone_naive(value)
+    elif isinstance(result, list):
+        for i, item in enumerate(result):
+            if hasattr(item, "tzinfo") and item.tzinfo is not None:
+                result[i] = item.replace(tzinfo=None)
+            elif isinstance(item, (dict, list)):
+                result[i] = make_timezone_naive(item)
+
+    return result
+
+
+def export_report_as_excel(report_data):
+    """Generate Excel report"""
+    from io import BytesIO
     import pandas as pd
+    import copy
+    import datetime
 
     # Create Excel writer
     output = BytesIO()
@@ -289,51 +322,88 @@ def export_report_as_excel(report_data):
 
         # Summary sheet
         summary_data = {
-            "Metric": [
-                "Total Items",
-                "Total Quantity (kg)",
-                "Average Sustainability Score",
-            ],
+            "Metric": ["Total Items", "Total Weight (kg)", "Avg Daily Intake (kg)"],
             "Value": [
                 report_data["total_items"],
-                f"{report_data['total_quantity']:.2f}",
-                f"{report_data['sustainability_metrics']['average_score']:.1f}",
+                report_data["total_weight"],
+                report_data["avg_daily_intake"],
             ],
         }
         summary_df = pd.DataFrame(summary_data)
         summary_df.to_excel(writer, sheet_name="Summary", index=False)
 
-        # Status breakdown sheet
-        status_df = pd.DataFrame(report_data["status_breakdown"])
-        status_df.to_excel(writer, sheet_name="Status Breakdown", index=False)
-
-        # Material breakdown sheet
-        material_df = pd.DataFrame(report_data["material_breakdown"])
-        material_df.to_excel(writer, sheet_name="Material Breakdown", index=False)
-
-        # Quality breakdown sheet
-        quality_df = pd.DataFrame(report_data["quality_breakdown"])
-        quality_df.to_excel(writer, sheet_name="Quality Analysis", index=False)
-
-        # Format workbook
-        for sheet in workbook.worksheets():
-            sheet.set_column("A:Z", 15)  # Set column width
-            sheet.freeze_panes(1, 0)  # Freeze header row
-
-        # Add title formatting
-        title_format = workbook.add_format(
-            {
-                "bold": True,
-                "font_size": 14,
-                "align": "center",
-                "bg_color": "#4B0082",
-                "font_color": "white",
-            }
+        # Environmental Impact sheet
+        impact = report_data["environmental_impact"]
+        impact_data = {
+            "Metric": [
+                "CO2 Saved (kg)",
+                "Water Saved (L)",
+                "Landfill Space Reduced (m³)",
+            ],
+            "Value": [
+                impact["co2_saved"],
+                impact["water_saved"],
+                impact["landfill_reduced"],
+            ],
+        }
+        pd.DataFrame(impact_data).to_excel(
+            writer, sheet_name="Environmental Impact", index=False
         )
 
-        for sheet in workbook.worksheets():
-            for col in range(sheet.dim_colmax + 1):
-                sheet.write(0, col, sheet.table[0][col], title_format)
+        # Status breakdown sheet
+        if "status_breakdown" in report_data:
+            # Convert QuerySet to list of dicts and handle datetime objects
+            status_data = []
+            for item in report_data["status_breakdown"]:
+                row = {}
+                for key, value in item.items():
+                    if isinstance(value, datetime.datetime) and value.tzinfo is not None:
+                        row[key] = value.replace(tzinfo=None)
+                    else:
+                        row[key] = value
+                status_data.append(row)
+            
+            status_df = pd.DataFrame(status_data)
+            status_df.to_excel(writer, sheet_name="Status Breakdown", index=False)
+
+        # Material breakdown sheet
+        if "material_breakdown" in report_data:
+            # Convert QuerySet to list of dicts and handle datetime objects
+            material_data = []
+            for item in report_data["material_breakdown"]:
+                row = {}
+                for key, value in item.items():
+                    if isinstance(value, datetime.datetime) and value.tzinfo is not None:
+                        row[key] = value.replace(tzinfo=None)
+                    else:
+                        row[key] = value
+                material_data.append(row)
+                
+            material_df = pd.DataFrame(material_data)
+            material_df.to_excel(writer, sheet_name="Material Breakdown", index=False)
+
+        # Quality breakdown sheet
+        if "quality_breakdown" in report_data:
+            # Convert QuerySet to list of dicts and handle datetime objects
+            quality_data = []
+            for item in report_data["quality_breakdown"]:
+                row = {}
+                for key, value in item.items():
+                    if isinstance(value, datetime.datetime) and value.tzinfo is not None:
+                        row[key] = value.replace(tzinfo=None)
+                    else:
+                        row[key] = value
+                quality_data.append(row)
+                
+            quality_df = pd.DataFrame(quality_data)
+            quality_df.to_excel(writer, sheet_name="Quality Analysis", index=False)
+
+        # Format workbook - using a simpler approach
+        # Just set column width and freeze the headers
+        for sheet in writer.sheets:
+            worksheet = writer.sheets[sheet]
+            worksheet.set_column(0, 20, 15)  # Set width for all columns
+            worksheet.freeze_panes(1, 0)  # Freeze the first row
 
     return output.getvalue()
 
@@ -412,22 +482,6 @@ def get_trends_analysis(start_date, end_date, factory=None):
     }
 
 
-def generate_waste_report(start_date, end_date):
-    """Generate comprehensive waste report data"""
-    waste_items = TextileWaste.objects.filter(created_at__range=(start_date, end_date))
-
-    return {
-        "total_items": waste_items.count(),
-        "total_weight": waste_items.aggregate(Sum("weight"))["weight__sum"] or 0,
-        "avg_daily_intake": waste_items.values("created_at__date")
-        .annotate(daily_total=Sum("weight"))
-        .aggregate(Avg("daily_total"))["daily_total__avg"]
-        or 0,
-        "waste_by_type": waste_items.values("waste_type").annotate(total=Sum("weight")),
-        "items": waste_items,
-    }
-
-
 def calculate_sustainability_impact(report_data):
     """Calculate environmental impact metrics"""
     total_weight = report_data["total_weight"]
@@ -437,30 +491,6 @@ def calculate_sustainability_impact(report_data):
         "water_saved": round(total_weight * 2700, 2),  # liters of water saved
         "landfill_reduced": round(total_weight * 0.82, 2),  # cubic meters saved
     }
-
-
-def get_trends_analysis(start_date, end_date):
-    """Analyze trends in waste collection"""
-    waste_by_date = (
-        TextileWaste.objects.filter(date_added__range=(start_date, end_date))
-        .values("date_added__date")
-        .annotate(daily_total=Sum("quantity"))
-        .order_by("date_added__date")
-    )
-
-    # Convert to pandas for trend analysis
-    df = pd.DataFrame(waste_by_date)
-    if not df.empty:
-        df["moving_avg"] = df["daily_total"].rolling(window=7).mean()
-        trend_direction = (
-            "increasing"
-            if df["daily_total"].iloc[-1] > df["daily_total"].iloc[0]
-            else "decreasing"
-        )
-    else:
-        trend_direction = "stable"
-
-    return {"direction": trend_direction, "day_by_day": waste_by_date}
 
 
 def export_report_as_pdf(report_data):
@@ -494,43 +524,3 @@ def export_report_as_pdf(report_data):
     p.save()
     return buffer.getvalue()
 
-
-def export_report_as_excel(report_data):
-    """Generate Excel report"""
-    buffer = BytesIO()
-
-    with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
-        # Summary sheet
-        summary_data = {
-            "Metric": ["Total Items", "Total Weight (kg)", "Avg Daily Intake (kg)"],
-            "Value": [
-                report_data["total_items"],
-                report_data["total_weight"],
-                report_data["avg_daily_intake"],
-            ],
-        }
-        pd.DataFrame(summary_data).to_excel(writer, sheet_name="Summary", index=False)
-
-        # Environmental Impact sheet
-        impact = report_data["environmental_impact"]
-        impact_data = {
-            "Metric": [
-                "CO2 Saved (kg)",
-                "Water Saved (L)",
-                "Landfill Space Reduced (m³)",
-            ],
-            "Value": [
-                impact["co2_saved"],
-                impact["water_saved"],
-                impact["landfill_reduced"],
-            ],
-        }
-        pd.DataFrame(impact_data).to_excel(
-            writer, sheet_name="Environmental Impact", index=False
-        )
-
-        # Detailed items sheet
-        items_df = pd.DataFrame(report_data["items"].values())
-        items_df.to_excel(writer, sheet_name="Detailed Items", index=False)
-
-    return buffer.getvalue()

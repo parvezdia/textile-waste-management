@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.paginator import Paginator
-from django.db.models import Count, Sum
+from django.db.models import Count, Sum, Avg
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -329,17 +329,21 @@ def inventory_analytics(request):
     # For factory partners, show only their data
     if hasattr(request.user, "factorypartner"):
         metrics = get_inventory_metrics(factory=request.user.factorypartner)
-        efficiency_metrics = calculate_storage_efficiency(factory=request.user.factorypartner)
-        
+        efficiency_metrics = calculate_storage_efficiency(
+            factory=request.user.factorypartner
+        )
+
         # Get latest 90 days for trend analytics
         end_date = timezone.now()
         start_date = end_date - timedelta(days=90)
-          # Get trends analysis for this factory (filter the result afterwards)
+        # Get trends analysis for this factory (filter the result afterwards)
         trends_data = get_trends_analysis(start_date, end_date)
-        
+
         # Get expiring inventory
-        expiring_soon = get_expiring_inventory(days=30, factory=request.user.factorypartner)
-        
+        expiring_soon = get_expiring_inventory(
+            days=30, factory=request.user.factorypartner
+        )
+
         return render(
             request,
             "inventory/analytics.html",
@@ -348,14 +352,14 @@ def inventory_analytics(request):
                 "efficiency_metrics": efficiency_metrics,
                 "trends": trends_data,
                 "expiring_soon": expiring_soon,
-                "factory_view": True
+                "factory_view": True,
             },
         )
     # For admin users with proper permissions, show all data
     elif request.user.has_perm("inventory.can_view_analytics"):
         metrics = get_inventory_metrics()
         efficiency_metrics = calculate_storage_efficiency()
-        
+
         return render(
             request,
             "inventory/analytics.html",
@@ -368,75 +372,195 @@ def inventory_analytics(request):
 
 
 @login_required
-@permission_required("inventory.can_view_analytics")
 def inventory_reports(request):
-    """Report generation interface"""
-    return render(request, "inventory/reports.html")
+    """Report generation interface with support for factory partners"""
+    # Check if the user is a factory partner and adjust permissions accordingly
+    if hasattr(request.user, "factorypartner"):
+        # Get date range from request if available
+        start_date = request.GET.get("start_date")
+        end_date = request.GET.get("end_date")
 
-
-@login_required
-@permission_required("inventory.can_view_analytics")
-def generate_report(request):
-    """Generate and display inventory report with export options"""
-    # Get date range from request
-    start_date = request.GET.get("start_date")
-    end_date = request.GET.get("end_date")
-    export_format = request.GET.get("format")
-
-    if not (start_date and end_date):
-        # Default to last 30 days if no date range specified
-        end_date = timezone.now()
-        start_date = end_date - timezone.timedelta(days=30)
-    else:
-        start_date = datetime.strptime(start_date, "%Y-%m-%d")
-        end_date = datetime.strptime(end_date, "%Y-%m-%d")
-
-    # Generate report data
-    report_data = generate_waste_report(start_date, end_date)
-
-    # Add environmental impact metrics
-    report_data["environmental_impact"] = calculate_sustainability_impact(report_data)
-
-    # Add trends analysis
-    report_data["trends"] = get_trends_analysis(start_date, end_date)
-
-    # Handle export requests
-    if export_format == "pdf":
-        pdf_data = export_report_as_pdf(report_data)
-        response = HttpResponse(pdf_data, content_type="application/pdf")
-        response["Content-Disposition"] = 'attachment; filename="inventory_report.pdf"'
-        return response
-
-    elif export_format == "excel":
-        excel_data = export_report_as_excel(report_data)
-        response = HttpResponse(
-            excel_data,
-            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        # Get factory's inventory metrics for dashboard display
+        metrics = get_inventory_metrics(factory=request.user.factorypartner)
+        efficiency_metrics = calculate_storage_efficiency(
+            factory=request.user.factorypartner
         )
-        response["Content-Disposition"] = 'attachment; filename="inventory_report.xlsx"'
-        return response
+        
+        # Add sustainability score to metrics - with improved calculation
+        base_query = TextileWaste.objects.filter(factory=request.user.factorypartner)
+        
+        # Only use items with non-zero sustainability scores to avoid skewing the average
+        sustainability_data = base_query.filter(sustainability_score__gt=0).aggregate(
+            avg=Avg("sustainability_score"),
+            count=Count("id")
+        )
+        
+        avg_sustainability = sustainability_data["avg"] or 0
+        
+        # If we have no items with sustainability scores, check if we have any items at all
+        if avg_sustainability == 0 and base_query.exists():
+            # Set a default value if there are items but none have sustainability scores
+            avg_sustainability = 50  # Default middle value on 0-100 scale
+            
+        # Convert from 0-100 scale to 0-10 scale for display
+        metrics["avg_sustainability"] = avg_sustainability / 10
+        
+        # Get default date ranges for the report form
+        default_end_date = timezone.now()
+        default_start_date = default_end_date - timedelta(days=30)
 
-    # Display report in HTML format
-    return render(
-        request,
-        "inventory/report_result.html",
-        {"report": report_data, "start_date": start_date, "end_date": end_date},
-    )
+        context = {
+            "metrics": metrics,
+            "efficiency_metrics": efficiency_metrics,
+            "default_start_date": default_start_date.strftime("%Y-%m-%d"),
+            "default_end_date": default_end_date.strftime("%Y-%m-%d"),
+            "factory_view": True,
+        }
+
+        # If exporting a report
+        if request.GET.get("action") == "export":
+            try:
+                # Create naive datetime objects without timezone info
+                start_date = datetime.strptime(
+                    request.GET.get("start_date"), "%Y-%m-%d"
+                )
+                end_date = datetime.strptime(request.GET.get("end_date"), "%Y-%m-%d")
+
+                # Add one day to end_date to include the full day
+                end_date = datetime.combine(end_date.date(), datetime.max.time())
+
+                export_format = request.GET.get("format", "html")
+
+                # Validate date ranges
+                today = timezone.now().date()
+                if start_date.date() > end_date.date():
+                    messages.error(request, "Start date cannot be after end date.")
+                    return render(request, "inventory/reports.html", context)
+
+                if end_date.date() > today:
+                    messages.error(request, "End date cannot be in the future.")
+                    return render(request, "inventory/reports.html", context)
+
+            except (TypeError, ValueError):
+                messages.error(request, "Invalid date range provided")
+                return render(request, "inventory/reports.html", context)
+
+            try:
+                # Generate report data specific to this factory
+                # Use naive datetime objects for the query
+                factory = request.user.factorypartner
+                report_data = generate_waste_report(start_date, end_date, factory)
+
+                # Add sustainability impact data
+                impact_data = calculate_sustainability_impact(report_data)
+                report_data["environmental_impact"] = impact_data
+
+                # Add trends analysis
+                trends_data = get_trends_analysis(start_date, end_date, factory)
+                report_data["trends"] = trends_data
+
+                if export_format == "excel":
+                    try:
+                        excel_data = export_report_as_excel(report_data)
+                        response = HttpResponse(
+                            excel_data,
+                            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        )
+                        response["Content-Disposition"] = (
+                            f'attachment; filename="factory_report_{start_date.strftime("%Y%m%d")}.xlsx"'
+                        )
+                        return response
+                    except Exception as e:
+                        import traceback
+
+                        error_details = traceback.format_exc()
+                        print(f"Excel Export Error: {error_details}")
+                        messages.error(
+                            request, f"Error generating Excel report: {str(e)}"
+                        )
+                        return render(request, "inventory/reports.html", context)
+
+                else:  # HTML preview
+                    context["report"] = report_data
+                    context["start_date"] = start_date
+                    context["end_date"] = end_date
+                    return render(request, "inventory/report_result.html", context)
+
+            except Exception as e:
+                import traceback
+
+                error_details = traceback.format_exc()
+                print(f"Report Generation Error: {error_details}")
+                messages.error(request, f"Error generating report: {str(e)}")
+                return render(request, "inventory/reports.html", context)
+
+        # Regular view - show the report generation form
+        return render(request, "inventory/reports.html", context)
+
+    # For admin users with proper permissions
+    elif request.user.has_perm("inventory.can_view_analytics"):
+        return render(request, "inventory/reports.html")
+
+    else:
+        # For other users without permission
+        messages.error(request, "You don't have permission to generate reports.")
+        return redirect("inventory:dashboard")
 
 
 @login_required
 @factory_required
 def factory_reports(request):
     """Factory-specific reports view"""
+    # Get basic metrics from existing utility functions
     metrics = get_inventory_metrics(factory=request.user.factorypartner)
-    efficiency_metrics = calculate_storage_efficiency(
-        factory=request.user.factorypartner
-    )
+    
+    # Get factory's waste items
+    factory_waste = TextileWaste.objects.filter(factory=request.user.factorypartner)
+    
+    # Create status distribution with counts and quantities
+    status_distribution = factory_waste.values('status').annotate(
+        count=Count('id'),
+        total_quantity=Sum('quantity')
+    ).order_by('status')
+    
+    # Generate monthly trend data for the past 12 months
+    end_date = timezone.now()
+    start_date = end_date - timedelta(days=365)  # Past year
+    
+    # Get monthly data
+    monthly_data = []
+    monthly_labels = []
+    
+    # Create a list of the past 12 months
+    for i in range(12):
+        month_end = end_date - timedelta(days=30 * i)
+        month_start = month_end - timedelta(days=30)
+        month_count = factory_waste.filter(date_added__range=[month_start, month_end]).count()
+        
+        # Format month for display (e.g., "Jan 2025")
+        month_label = month_start.strftime("%b %Y")
+        
+        monthly_data.append(month_count)
+        monthly_labels.append(month_label)
+    
+    # Reverse the lists to show oldest to newest
+    monthly_data.reverse()
+    monthly_labels.reverse()
+    
+    # Convert data to JSON strings for direct use in JavaScript
+    import json
+    monthly_data_json = json.dumps(monthly_data)
+    monthly_labels_json = json.dumps(monthly_labels)
 
     return render(
         request,
         "inventory/factory_reports.html",
-        {"metrics": metrics, "efficiency_metrics": efficiency_metrics},
+        {
+            "metrics": metrics,
+            "status_distribution": status_distribution,
+            "monthly_data": monthly_data_json,
+            "monthly_labels": monthly_labels_json,
+        }
     )
 
 

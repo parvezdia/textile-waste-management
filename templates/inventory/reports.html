@@ -6,34 +6,86 @@
 <div class="container py-4">
     <div class="row mb-4">
         <div class="col">
-            <h2>Generate Inventory Report</h2>
+            <h2>{% if factory_view %}Factory{% else %}Inventory{% endif %} Report Generator</h2>
             <p class="text-muted">Generate comprehensive reports with detailed analytics and sustainability metrics</p>
         </div>
     </div>
 
+    <!-- Metrics Cards -->
+    {% if factory_view %}
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-uppercase mb-1">Total Waste Items</h6>
+                            <h3 class="mb-0">{{ metrics.total_items|default:"0" }}</h3>
+                        </div>
+                        <div>
+                            <i class="fas fa-box fa-3x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-success text-white mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-uppercase mb-1">Total Quantity</h6>
+                            <h3 class="mb-0">{{ metrics.total_quantity|default:"0" }} kg</h3>
+                        </div>
+                        <div>
+                            <i class="fas fa-weight-hanging fa-3x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-info text-white mb-3">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-uppercase mb-1">Sustainability Score</h6>
+                            <h3 class="mb-0">{{ metrics.avg_sustainability|default:"0"|floatformat:1 }}/10</h3>
+                        </div>
+                        <div>
+                            <i class="fas fa-leaf fa-3x opacity-50"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="card">
         <div class="card-body">
-            <form id="reportForm" method="GET" action="{% url 'inventory:export_report' %}">
+            <form id="reportForm" method="GET" action="{% url 'inventory:reports' %}">
+                <input type="hidden" name="action" value="export">
                 <div class="row g-3 align-items-end mb-4">
                     <div class="col-md-4">
                         <label for="start_date" class="form-label">Start Date</label>
-                        <input type="date" class="form-control" id="start_date" name="start_date" required>
+                        <input type="date" class="form-control" id="start_date" name="start_date" required value="{{ default_start_date }}">
                     </div>
                     <div class="col-md-4">
                         <label for="end_date" class="form-label">End Date</label>
-                        <input type="date" class="form-control" id="end_date" name="end_date" required>
+                        <input type="date" class="form-control" id="end_date" name="end_date" required value="{{ default_end_date }}">
                     </div>
                     <div class="col-md-4">
                         <label for="format" class="form-label">Export Format</label>
                         <select class="form-select" id="format" name="format">
                             <option value="html">View in Browser</option>
-                            <option value="pdf">Download as PDF</option>
                             <option value="excel">Download as Excel</option>
                         </select>
                     </div>
                 </div>
 
                 <div class="row g-3">
+                    <!-- Report Contents Card -->
                     <div class="col-md-6">
                         <div class="card h-100">
                             <div class="card-header bg-light">
@@ -67,6 +119,7 @@
                         </div>
                     </div>
 
+                    <!-- Preview Card -->
                     <div class="col-md-6">
                         <div class="card h-100">
                             <div class="card-header bg-light">
@@ -81,10 +134,7 @@
                                         <p class="period mb-2"></p>
                                         <p class="estimate mb-3"></p>
                                     </div>
-                                    <div class="alert alert-info">
-                                        <i class="fas fa-info-circle me-2"></i>
-                                        Choose your export format and click Generate Report
-                                    </div>
+                                    <!-- Removed the alert that was causing the SweetAlert -->
                                 </div>
                                 <div id="initialMessage" class="text-center text-muted py-5">
                                     <i class="fas fa-calendar-alt fa-2x mb-3"></i>
@@ -103,9 +153,44 @@
             </form>
         </div>
     </div>
+    
+    {% if factory_view %}
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">Export Formats</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="me-3">
+                            <i class="fas fa-file-alt fa-2x text-primary"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0">HTML Preview</h6>
+                            <p class="text-muted mb-0 small">View report directly in browser</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="me-3">
+                            <i class="fas fa-file-excel fa-2x text-success"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0">Excel Export</h6>
+                            <p class="text-muted mb-0 small">Analyze data with spreadsheets</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('reportForm');
@@ -114,51 +199,137 @@ document.addEventListener('DOMContentLoaded', function() {
     const startDate = document.getElementById('start_date');
     const endDate = document.getElementById('end_date');
 
-    // Set default date range (last 30 days)
+    // Set max date to today for both date pickers
     const today = new Date();
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(today.getDate() - 30);
-    
-    startDate.value = thirtyDaysAgo.toISOString().split('T')[0];
-    endDate.value = today.toISOString().split('T')[0];
+    const todayStr = today.toISOString().split('T')[0];
+    startDate.setAttribute('max', todayStr);
+    endDate.setAttribute('max', todayStr);
 
-    function updatePreview() {
-        if (startDate.value && endDate.value) {
-            preview.classList.remove('d-none');
-            initial.classList.add('d-none');
+    // Update min date for end date picker based on start date
+    function updateEndDateMin() {
+        if (startDate.value) {
+            endDate.setAttribute('min', startDate.value);
             
-            const start = new Date(startDate.value);
-            const end = new Date(endDate.value);
-            const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-            
-            preview.querySelector('.period').textContent = 
-                `Period: ${start.toLocaleDateString()} - ${end.toLocaleDateString()}`;
-            preview.querySelector('.estimate').textContent = 
-                `Report will cover ${days} days of inventory data`;
+            // If end date is now invalid (before start date), clear it
+            if (endDate.value && new Date(endDate.value) < new Date(startDate.value)) {
+                endDate.value = '';
+                Swal.fire({
+                    title: 'Date Range Adjusted',
+                    text: 'End date has been cleared because it was before the selected start date',
+                    icon: 'info',
+                    confirmButtonColor: '#3085d6'
+                });
+            }
         } else {
-            preview.classList.add('d-none');
-            initial.classList.remove('d-none');
+            endDate.removeAttribute('min');
         }
     }
 
-    startDate.addEventListener('change', updatePreview);
-    endDate.addEventListener('change', updatePreview);
+    // Real-time validation when date changes
+    function validateDates() {
+        const start = startDate.value ? new Date(startDate.value) : null;
+        const end = endDate.value ? new Date(endDate.value) : null;
+        
+        // Reset validation styling
+        startDate.classList.remove('is-invalid');
+        endDate.classList.remove('is-invalid');
+        
+        let isValid = true;
+        let errorMessage = '';
+        
+        // Start date future validation
+        if (start) {
+            const startTime = start.getTime();
+            const todayTime = today.setHours(0, 0, 0, 0);
+            
+            if (startTime > todayTime) {
+                startDate.classList.add('is-invalid');
+                isValid = false;
+                errorMessage = 'Start date cannot be in the future';
+            }
+        }
+        
+        // End date future validation
+        if (end) {
+            const endTime = end.getTime();
+            const todayTime = today.setHours(0, 0, 0, 0);
+            
+            if (endTime > todayTime) {
+                endDate.classList.add('is-invalid');
+                isValid = false;
+                errorMessage = 'End date cannot be in the future';
+            }
+        }
+        
+        // Start/end date comparison - this validation is now redundant with the min attribute
+        // but we keep it as an extra layer of security
+        if (start && end) {
+            if (start > end) {
+                endDate.classList.add('is-invalid');
+                isValid = false;
+                errorMessage = 'End date cannot be before start date';
+            }
+        }
+        
+        return { isValid, errorMessage };
+    }
+
+    function updatePreview() {
+        const validation = validateDates();
+        const start = startDate.value ? new Date(startDate.value) : null;
+        const end = endDate.value ? new Date(endDate.value) : null;
+        
+        if (!validation.isValid || !start || !end) {
+            // Hide preview if dates are invalid
+            preview.classList.add('d-none');
+            initial.classList.remove('d-none');
+            return;
+        }
+        
+        // Show preview if dates are valid
+        preview.classList.remove('d-none');
+        initial.classList.add('d-none');
+        
+        const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1; // Include both start and end days
+        
+        preview.querySelector('.period').textContent = 
+            `Period: ${start.toLocaleDateString()} - ${end.toLocaleDateString()}`;
+        preview.querySelector('.estimate').textContent = 
+            `Report will cover ${days} days of inventory data`;
+    }
+
+    // Add event listeners for real-time validation
+    startDate.addEventListener('change', function() {
+        updateEndDateMin(); // This will update the min attribute on the end date
+        validateDates();
+        updatePreview();
+    });
+    
+    endDate.addEventListener('change', function() {
+        validateDates();
+        updatePreview();
+    });
+    
+    // Initial setup
+    updateEndDateMin();
     updatePreview();
 
-    // Form validation
+    // Form submission validation
     form.addEventListener('submit', function(e) {
-        const start = new Date(startDate.value);
-        const end = new Date(endDate.value);
+        const validation = validateDates();
         
-        if (end < start) {
+        if (!validation.isValid) {
             e.preventDefault();
-            alert('End date must be after start date');
+            Swal.fire({
+                title: 'Invalid Date Range',
+                text: validation.errorMessage,
+                icon: 'error',
+                confirmButtonColor: '#3085d6'
+            });
+            return false;
         }
         
-        if (end > new Date()) {
-            e.preventDefault();
-            alert('End date cannot be in the future');
-        }
+        return true;
     });
 });
 </script>
