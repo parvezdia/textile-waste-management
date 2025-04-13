@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+
+{% block title %}Payment Information - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2>Payment Information</h2>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'orders:create_order' %}" class="btn btn-secondary">Back to Create Order</a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+
+                    <div class="mb-4">
+                        <h5>Order Summary</h5>
+                        <div class="card bg-light mb-3">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        {% if order.design.image %}
+                                            <img src="{{ order.design.image.url }}" class="img-fluid rounded" alt="{{ order.design.name }}">
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-8">
+                                        <h6>{{ order.design.name }}</h6>
+                                        <p class="small text-muted">{{ order.design.description }}</p>
+                                        <div class="d-flex justify-content-between">
+                                            <span>Quantity:</span>
+                                            <span>{{ order.quantity }}</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between">
+                                            <span>Total Price:</span>
+                                            <span><strong>${{ order.total_price }}</strong></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h5 class="mb-3">Payment Method</h5>
+                    <div class="mb-3">
+                        <label for="{{ form.method.id_for_label }}" class="form-label">Payment Method</label>
+                        {{ form.method }}
+                        {% if form.method.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in form.method.errors %}
+                                    {{ error }}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="card_number" class="form-label">Card Number</label>
+                        <input type="text" name="card_number" id="card_number" class="form-control" placeholder="1234 5678 9012 3456" required>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="expiry_date" class="form-label">Expiry Date</label>
+                                <input type="text" name="expiry_date" id="expiry_date" class="form-control" placeholder="MM/YY" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="cvv" class="form-label">CVV</label>
+                                <input type="text" name="cvv" id="cvv" class="form-control" placeholder="123" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="cardholder_name" class="form-label">Cardholder Name</label>
+                        <input type="text" name="cardholder_name" id="cardholder_name" class="form-control" required>
+                    </div>
+
+                    <input type="hidden" name="payment_id" value="{{ form.payment_id.value|default:'' }}">
+                    <input type="hidden" name="amount" value="{{ order.total_price }}">
+                    <input type="hidden" name="order_id" value="{{ order.order_id }}">
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                        <button type="submit" class="btn btn-primary">Continue to Delivery Information</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Order Summary</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-4">
+                    <li class="d-flex justify-content-between mb-2">
+                        <span>Design:</span>
+                        <span>{{ order.design.name }}</span>
+                    </li>
+                    <li class="d-flex justify-content-between mb-2">
+                        <span>Designer:</span>
+                        <span>{{ order.design.designer.user.get_full_name|default:order.design.designer.user.username }}</span>
+                    </li>
+                    <li class="d-flex justify-content-between mb-2">
+                        <span>Base Price (per unit):</span>
+                        <span>${{ order.design.price }}</span>
+                    </li>
+                    <li class="d-flex justify-content-between mb-2">
+                        <span>Quantity:</span>
+                        <span>{{ order.quantity }}</span>
+                    </li>
+                    {% if order.customizations %}
+                        <li class="mb-2">
+                            <div class="d-flex justify-content-between">
+                                <span>Customizations:</span>
+                                <span>
+                                    {% comment %}Calculate customization cost manually if needed{% endcomment %}
+                                </span>
+                            </div>
+                            <ul class="ps-3 mt-1 mb-0 small">
+                                {% for option, value in order.customizations.items %}
+                                <li>{{ option }}: {{ value }}</li>
+                                {% endfor %}
+                            </ul>
+                        </li>
+                    {% endif %}
+                    <li class="d-flex justify-content-between mb-2 border-top pt-2">
+                        <strong>Total:</strong>
+                        <strong>${{ order.total_price }}</strong>
+                    </li>
+                </ul>
+
+                <div class="alert alert-info mb-0">
+                    <h6 class="alert-heading">Secure Payment</h6>
+                    <p class="mb-0 small">All payment information is encrypted and securely processed.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize form fields with Bootstrap validation classes
+        const form = document.querySelector('form');
+        Array.from(form.elements).forEach(element => {
+            if (element.type !== 'hidden' && element.type !== 'submit') {
+                element.classList.add('form-control');
+                if (element.required) {
+                    element.classList.add('required');
+                }
+            }
+        });
+
+        // Simple card number formatting
+        const cardNumberInput = document.getElementById('card_number');
+        if (cardNumberInput) {
+            cardNumberInput.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length > 16) value = value.slice(0, 16);
+                
+                // Add spaces every 4 digits
+                let formattedValue = '';
+                for (let i = 0; i < value.length; i++) {
+                    if (i > 0 && i % 4 === 0) {
+                        formattedValue += ' ';
+                    }
+                    formattedValue += value[i];
+                }
+                e.target.value = formattedValue;
+            });
+        }
+
+        // Simple expiry date formatting (MM/YY)
+        const expiryDateInput = document.getElementById('expiry_date');
+        if (expiryDateInput) {
+            expiryDateInput.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length > 4) value = value.slice(0, 4);
+                
+                if (value.length > 2) {
+                    value = value.slice(0, 2) + '/' + value.slice(2);
+                }
+                
+                e.target.value = value;
+            });
+        }
+
+        // Limit CVV to 3 or 4 digits
+        const cvvInput = document.getElementById('cvv');
+        if (cvvInput) {
+            cvvInput.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length > 4) value = value.slice(0, 4);
+                e.target.value = value;
+            });
+        }
+    });
+</script>
+{% endblock %}

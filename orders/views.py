@@ -5,6 +5,9 @@ from django.shortcuts import get_object_or_404, redirect, render
 import logging
 import json
 import os
+import uuid
+from datetime import date, timedelta
+from decimal import Decimal
 
 from .forms import DeliveryInfoForm, OrderForm, PaymentInfoForm
 from .models import Order, PaymentInfo, DeliveryInfo
@@ -106,7 +109,8 @@ def create_order(request, design_id=None):
         # Initialize order form with modified data
         order_form = OrderForm(post_data)
         logger.debug(f"Form initialized with data: {post_data}")
-          # Add customization data from session
+          
+        # Add customization data from session
         customization_data = request.session.get('design_customizations', {})
         if design_id and customization_data and str(customization_data.get('design_id')) == str(design_id):
             customization_options = customization_data.get('options', {})
@@ -129,39 +133,32 @@ def create_order(request, design_id=None):
             logger.debug("Form is valid, proceeding with order creation")
             try:
                 with transaction.atomic():
-                    # Create dummy payment and delivery info for now
-                    # In a production system, these would be properly collected
-                    import uuid
-                    from datetime import timedelta, date
+                    # In the multi-step process, we create temporary payment and delivery info first
+                    # These will be updated in the next steps
                     
-                    # Create payment info
+                    # Create temporary payment info
                     payment = PaymentInfo(
                         payment_id=f"PAY-{uuid.uuid4().hex[:8].upper()}",
-                        method="CREDIT_CARD",
+                        method="PENDING",
                         amount=0.0,  # Will be updated with order total
                         status="PENDING"
                     )
                     payment.save()
                     
-                    # Create delivery info with estimated delivery in 14 days if not available from design
+                    # Create temporary delivery info
                     estimated_delivery = date.today() + timedelta(days=14)
-                    if design and hasattr(design, 'get_estimated_delivery_date'):
-                        estimated_delivery = design.get_estimated_delivery_date()
-                    
-                    # Get shipping address from buyer profile if available
-                    shipping_address = "Address to be updated"
-                    if hasattr(request.user.buyer, 'shipping_address'):
-                        shipping_address = request.user.buyer.shipping_address or shipping_address
+                    if design and hasattr(design, 'estimated_delivery_days'):
+                        estimated_delivery = date.today() + timedelta(days=design.estimated_delivery_days)
                     
                     delivery = DeliveryInfo(
                         tracking_number=f"TRK-{uuid.uuid4().hex[:8].upper()}",
-                        carrier="Standard Delivery",
-                        address=shipping_address,
+                        carrier="PENDING",
+                        address="Address to be provided",
                         estimated_delivery_date=estimated_delivery
                     )
                     delivery.save()
                     
-                    # Create order                    # Create the order object but don't save it yet
+                    # Create the order object but don't save it yet
                     order = order_form.save(commit=False)
                     order.buyer = request.user.buyer
                     order.payment_info = payment
@@ -190,7 +187,8 @@ def create_order(request, design_id=None):
                             logger.debug(f"Order creation - No matching customization data found for design_id: {design_id}")
                             # Initialize with empty dict to prevent None issues
                             order.customizations = {}
-                      # Generate a unique order_id if not provided
+                    
+                    # Generate a unique order_id if not provided
                     if not order.order_id:
                         # Make sure the order ID is unique
                         while True:
@@ -198,7 +196,8 @@ def create_order(request, design_id=None):
                             if not Order.objects.filter(order_id=new_order_id).exists():
                                 order.order_id = new_order_id
                                 break
-                              # Calculate price based on quantity and customizations
+                    
+                    # Calculate price based on quantity and customizations
                     base_price = getattr(design, 'price', 0)
                     if not base_price and hasattr(design, 'get_price'):
                         base_price = design.get_price()
@@ -238,18 +237,27 @@ def create_order(request, design_id=None):
                     payment.amount = order.total_price
                     payment.save()
                     
+                    # Add notes from the form if provided
+                    if 'notes' in post_data:
+                        order.notes = post_data.get('notes')
+                    
                     logger.debug(f"Final price: {order.total_price}")
                     order.save()
                     
-                    # Clear session customization data after successful order
+                    # Clear session customization data after successful order creation
                     if 'design_customizations' in request.session:
                         del request.session['design_customizations']
                     
-                messages.success(request, "Order placed successfully! You can track your order status here.")
-                return redirect("orders:order_detail", order_id=order.order_id)            
+                    # Store order_id in session for the next steps
+                    request.session['current_order_id'] = order.order_id
+                    
+                    # Redirect to payment information page
+                    messages.success(request, "Order created! Please provide payment information.")
+                    return redirect("orders:payment_info", order_id=order.order_id)
+            
             except Exception as e:
                 logger.exception(f"Error creating order: {str(e)}")
-                messages.error(request, f"Error placing order: {str(e)}")
+                messages.error(request, f"Error creating order: {str(e)}")
         else:
             # If form is not valid, log the errors
             logger.debug(f"Form validation errors: {order_form.errors}")
@@ -266,15 +274,13 @@ def create_order(request, design_id=None):
             if customization_data and str(customization_data.get('design_id')) == str(design_id):
                 customization_options = customization_data.get('options', {})
                 initial_data['customizations'] = customization_options
-                
+        
         order_form = OrderForm(initial=initial_data)
-        payment_form = PaymentInfoForm()
-        delivery_form = DeliveryInfoForm()# Create context dictionary for both POST and GET requests
+    
+    # Create context dictionary for both POST and GET requests
     context = {
         "form": order_form,  # Template uses "form" not "order_form"
         "order_form": order_form,  # Keep this for backward compatibility
-        "payment_form": payment_form if 'payment_form' in locals() else None,
-        "delivery_form": delivery_form if 'delivery_form' in locals() else None,
     }
     
     if design:
@@ -377,3 +383,137 @@ def cancel_order(request, order_id):
         else:
             messages.error(request, "Order cannot be cancelled at this stage.")
     return redirect("orders:order_detail", order_id=order.order_id)
+
+
+@login_required
+def payment_info(request, order_id):
+    """
+    View for collecting payment information for an order that has been created.
+    This is step 2 in the multi-step order process.
+    """
+    order = get_object_or_404(Order, order_id=order_id)
+    
+    # Security check - only the buyer who placed the order can access this
+    if not hasattr(request.user, "buyer") or order.buyer != request.user.buyer:
+        messages.error(request, "You don't have permission to access this order.")
+        return redirect("orders:order_list")
+    
+    # If payment is already completed, redirect to delivery info or order detail
+    if order.payment_info.status == "COMPLETED":
+        if order.delivery_info.status == "PROCESSING":
+            return redirect("orders:delivery_info", order_id=order_id)
+        else:
+            return redirect("orders:order_detail", order_id=order_id)
+    
+    if request.method == "POST":
+        # Create a form instance with the submitted data
+        form = PaymentInfoForm(request.POST, instance=order.payment_info)
+        
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    payment = form.save(commit=False)
+                    
+                    # Update payment information
+                    payment.status = "COMPLETED"
+                    payment.transaction_date = date.today()
+                    payment.save()
+                    
+                    # Success message and redirect to delivery information
+                    messages.success(request, "Payment information saved successfully!")
+                    return redirect("orders:delivery_info", order_id=order_id)
+            except Exception as e:
+                logger.exception(f"Error saving payment information: {str(e)}")
+                messages.error(request, f"Error processing payment: {str(e)}")
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"Error in {field}: {error}")
+    else:
+        # Initialize form with current payment information
+        form = PaymentInfoForm(instance=order.payment_info)
+    
+    context = {
+        "order": order,
+        "form": form
+    }
+    
+    return render(request, "orders/payment_form.html", context)
+
+
+@login_required
+def delivery_info(request, order_id):
+    """
+    View for collecting delivery information for an order.
+    This is step 3 in the multi-step order process.
+    """
+    order = get_object_or_404(Order, order_id=order_id)
+    
+    # Security check - only the buyer who placed the order can access this
+    if not hasattr(request.user, "buyer") or order.buyer != request.user.buyer:
+        messages.error(request, "You don't have permission to access this order.")
+        return redirect("orders:order_list")
+    
+    # If payment hasn't been completed, redirect back to payment
+    if order.payment_info.status != "COMPLETED":
+        messages.warning(request, "Please complete payment information first.")
+        return redirect("orders:payment_info", order_id=order_id)
+    
+    # If delivery is already completed, redirect to order detail
+    if order.delivery_info.status != "PROCESSING":
+        return redirect("orders:order_detail", order_id=order_id)
+    
+    if request.method == "POST":
+        # Create a form instance with the submitted data
+        form = DeliveryInfoForm(request.POST, instance=order.delivery_info)
+        
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    delivery = form.save(commit=False)
+                    
+                    # Combine address fields
+                    address_parts = []
+                    address_parts.append(delivery.address)
+                    
+                    # Add city, postal code, state and country if provided in the form
+                    if 'city' in request.POST and request.POST['city']:
+                        address_parts.append(request.POST['city'])
+                    if 'postal_code' in request.POST and request.POST['postal_code']:
+                        address_parts.append(request.POST['postal_code'])
+                    if 'state' in request.POST and request.POST['state']:
+                        address_parts.append(request.POST['state'])
+                    if 'country' in request.POST and request.POST['country']:
+                        address_parts.append(request.POST['country'])
+                    
+                    # Update address with all parts
+                    delivery.address = ", ".join(filter(None, address_parts))
+                    
+                    # Set status to READY_FOR_PICKUP
+                    delivery.status = "READY_FOR_PICKUP"
+                    delivery.save()
+                    
+                    # Update order status to CONFIRMED now that payment and delivery info are complete
+                    order.status = "CONFIRMED"
+                    order.save()
+                    
+                    # Success message and redirect to order detail
+                    messages.success(request, "Delivery information saved. Your order is now complete!")
+                    return redirect("orders:order_detail", order_id=order_id)
+            except Exception as e:
+                logger.exception(f"Error saving delivery information: {str(e)}")
+                messages.error(request, f"Error processing delivery information: {str(e)}")
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"Error in {field}: {error}")
+    else:
+        # Initialize form with current delivery information
+        form = DeliveryInfoForm(instance=order.delivery_info)
+    
+    context = {
+        "order": order,
+        "form": form
+    }
+    
+    return render(request, "orders/delivery_form.html", context)
