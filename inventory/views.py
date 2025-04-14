@@ -694,3 +694,73 @@ def get_expiring_soon(request):
     ]
 
     return JsonResponse({"items": data})
+
+
+@login_required
+def get_recent_activities(request):
+    """API endpoint for fetching recent activities"""
+    # For factory partners, show only their activities
+    if hasattr(request.user, "factorypartner"):
+        activities = (
+            WasteHistory.objects.select_related("waste_item", "changed_by")
+            .filter(waste_item__factory=request.user.factorypartner)
+            .order_by("-timestamp")[:10]
+        )
+        
+        # Get the updated status counts for the dashboard
+        queryset = TextileWaste.objects.filter(factory=request.user.factorypartner)
+        status_counts = queryset.values("status").annotate(count=Count("id"))
+        
+        # Convert status counts to a dictionary for easier access in JavaScript
+        status_dict = {}
+        for item in status_counts:
+            status_dict[item['status']] = item['count']
+        
+        # Format the activities for JSON response
+        activity_list = []
+        for activity in activities:
+            activity_list.append({
+                "waste_id": activity.waste_item.waste_id,
+                "status": activity.status,
+                "user_name": activity.changed_by.get_full_name() or activity.changed_by.username,
+                "timestamp": activity.timestamp.strftime("%b %d, %Y %H:%M")
+            })
+        
+        return JsonResponse({
+            "activities": activity_list,
+            "counts": status_dict
+        })
+    else:
+        # For non-factory users or admin - show all activities if they have permission
+        if request.user.has_perm("inventory.can_view_analytics"):
+            activities = (
+                WasteHistory.objects.select_related("waste_item", "changed_by")
+                .order_by("-timestamp")[:10]
+            )
+            
+            # Get the updated status counts
+            queryset = TextileWaste.objects.all()
+            status_counts = queryset.values("status").annotate(count=Count("id"))
+            
+            # Convert status counts to a dictionary
+            status_dict = {}
+            for item in status_counts:
+                status_dict[item['status']] = item['count']
+            
+            # Format the activities for JSON response
+            activity_list = []
+            for activity in activities:
+                activity_list.append({
+                    "waste_id": activity.waste_item.waste_id,
+                    "status": activity.status,
+                    "user_name": activity.changed_by.get_full_name() or activity.changed_by.username,
+                    "timestamp": activity.timestamp.strftime("%b %d, %Y %H:%M")
+                })
+            
+            return JsonResponse({
+                "activities": activity_list,
+                "counts": status_dict
+            })
+        else:
+            # User doesn't have permission
+            return JsonResponse({"activities": [], "error": "Permission denied"}, status=403)

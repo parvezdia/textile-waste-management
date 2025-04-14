@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.db.models import Count, Sum, Avg, StdDev
 from django.utils import timezone
 
 
@@ -115,7 +116,6 @@ class FactoryDetails(models.Model):
         if not hasattr(self, "factory_partner"):
             return None
 
-        from django.db.models import Avg, StdDev
         from django.utils import timezone
 
         start_date = timezone.now() - timezone.timedelta(days=time_period_days)

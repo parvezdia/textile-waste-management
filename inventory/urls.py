@@ -25,12 +25,9 @@ urlpatterns = [
     path("factory/reports/", views.factory_reports, name="factory_reports"),
     # API Endpoints for AJAX
     path("api/metrics/", views.get_metrics, name="api_metrics"),
-    path(
-        "api/storage-efficiency/",
-        views.get_storage_efficiency,
-        name="api_storage_efficiency",
-    ),
+    path("api/storage-efficiency/", views.get_storage_efficiency, name="api_storage_efficiency"),
     path("api/expiring-soon/", views.get_expiring_soon, name="api_expiring_soon"),
     path("api/impact-metrics/", views.get_impact_metrics, name="api_impact_metrics"),
     path("api/trend-metrics/", views.get_trend_metrics, name="api_trend_metrics"),
+    path("api/activities/", views.get_recent_activities, name="api_activities"),  # New endpoint for recent activities
 ]

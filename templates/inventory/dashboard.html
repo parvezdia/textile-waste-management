@@ -4,52 +4,6 @@
 {% block title %}Inventory Dashboard - TFWMS{% endblock %}
 
 {% block content %}
-
-<!-- Inventory Navigation Bar -->
-<nav class="navbar navbar-expand-lg navbar-light bg-light mb-4 shadow-sm">
-    <div class="container-fluid">
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#inventoryNavbar">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="inventoryNavbar">
-            <ul class="navbar-nav me-auto">
-                <li class="nav-item">
-                    <a class="nav-link active" href="{% url 'inventory:dashboard' %}">
-                        <i class="fas fa-chart-pie me-2"></i>Dashboard
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'inventory:waste_list' %}">
-                        <i class="fas fa-boxes me-2"></i>Inventory Items
-                    </a>
-                </li>
-                {% if user.factorypartner %}
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'inventory:upload_waste' %}">
-                        <i class="fas fa-upload me-2"></i>Upload Waste
-                    </a>
-                </li>
-                {% endif %}                
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="reportsDropdown" role="button" data-bs-toggle="dropdown">
-                        <i class="fas fa-file-alt me-2"></i>Reports
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="#"><i class="fas fa-history me-2"></i>Activity Log</a></li>
-                        <li><a class="dropdown-item" href="{% url 'inventory:analytics' %}"><i class="fas fa-chart-bar me-2"></i>Analytics</a></li>
-                    </ul>
-                </li>
-            </ul>
-            <div class="d-flex">
-                <div class="input-group">
-                    <input type="search" class="form-control" placeholder="Search inventory...">
-                    <button class="btn btn-outline-primary"><i class="fas fa-search"></i></button>
-                </div>
-            </div>
-        </div>
-    </div>
-</nav>
-
 <div class="container-fluid">
     <!-- Page Header -->
     <div class="row mb-4">
@@ -89,7 +43,7 @@
                     <div class="d-flex align-items-start justify-content-between">
                         <div>
                             <h6 class="text-muted mb-2">Total Quantity</h6>
-                            <h3 class="mb-0">{{ total_waste.total_quantity|floatformat:2 }} kg</h3>
+                            <h3 class="mb-0">{{ total_waste.total_quantity|floatformat:2|default:"0.00" }} kg</h3>
                         </div>
                         <div class="bg-light rounded p-3">
                             <i class="fas fa-weight-scale fa-2x text-success"></i>
@@ -104,11 +58,13 @@
                     <div class="d-flex align-items-start justify-content-between">
                         <div>
                             <h6 class="text-muted mb-2">Available Items</h6>
-                            <h3 class="mb-0">
+                            <h3 class="mb-0" id="available-count">
                                 {% for status in status_counts %}
                                     {% if status.status == 'AVAILABLE' %}
                                         {{ status.count }}
                                     {% endif %}
+                                {% empty %}
+                                    0
                                 {% endfor %}
                             </h3>
                         </div>
@@ -125,11 +81,13 @@
                     <div class="d-flex align-items-start justify-content-between">
                         <div>
                             <h6 class="text-muted mb-2">Pending Review</h6>
-                            <h3 class="mb-0">
+                            <h3 class="mb-0" id="pending-count">
                                 {% for status in status_counts %}
                                     {% if status.status == 'PENDING_REVIEW' %}
                                         {{ status.count }}
                                     {% endif %}
+                                {% empty %}
+                                    0
                                 {% endfor %}
                             </h3>
                         </div>
@@ -151,25 +109,20 @@
                 </div>
                 <div class="card-body">
                     <div class="row g-3">
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <a href="{% url 'inventory:waste_list' %}" class="btn btn-outline-primary w-100">
                                 <i class="fas fa-list me-2"></i>View All Items
                             </a>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <a href="{% url 'inventory:upload_waste' %}" class="btn btn-outline-success w-100">
                                 <i class="fas fa-upload me-2"></i>Upload New
                             </a>
                         </div>
-                        <div class="col-md-3">
-                            <button class="btn btn-outline-info w-100">
+                        <div class="col-md-4">
+                            <a href="{% url 'inventory:reports' %}" class="btn btn-outline-info w-100">
                                 <i class="fas fa-file-export me-2"></i>Export Report
-                            </button>
-                        </div>
-                        <div class="col-md-3">
-                            <button class="btn btn-outline-warning w-100">
-                                <i class="fas fa-bell me-2"></i>Notifications
-                            </button>
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -179,8 +132,11 @@
         <!-- Recent Activities -->
         <div class="col-lg-8 mb-4">
             <div class="card shadow-sm">
-                <div class="card-header bg-white">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Recent Activities</h5>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="refresh-activities">
+                        <i class="fas fa-sync-alt"></i> Refresh
+                    </button>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
@@ -192,7 +148,7 @@
                                 <th>Time</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="activities-container">
                             {% for activity in recent_activities %}
                             <tr>
                                 <td>
@@ -206,16 +162,24 @@
                                                    {% elif activity.status == 'RESERVED' %}bg-info
                                                    {% elif activity.status == 'USED' %}bg-secondary
                                                    {% else %}bg-danger{% endif %}">
-                                        {{ activity.get_status_display }}
+                                        {% if activity.status == 'AVAILABLE' %}Available
+                                        {% elif activity.status == 'PENDING_REVIEW' %}Pending Review
+                                        {% elif activity.status == 'RESERVED' %}Reserved
+                                        {% elif activity.status == 'USED' %}Used
+                                        {% elif activity.status == 'EXPIRED' %}Expired
+                                        {% else %}{{ activity.status }}{% endif %}
                                     </span>
                                 </td>
-                                <td>{{ activity.changed_by.get_full_name }}</td>
+                                <td>{{ activity.changed_by.get_full_name|default:activity.changed_by.username }}</td>
                                 <td>{{ activity.timestamp|date:"M d, Y H:i" }}</td>
                             </tr>
                             {% empty %}
                             <tr>
                                 <td colspan="4" class="text-center py-4 text-muted">
-                                    No recent activities found
+                                    <div id="no-activities-msg">
+                                        <i class="fas fa-info-circle mb-2"></i><br>
+                                        <span>No recent activities found. Try uploading new inventory items.</span>
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -233,7 +197,7 @@
                     <span class="badge bg-warning">Next 30 days</span>
                 </div>
                 <div class="card-body p-0">
-                    <div class="list-group list-group-flush">
+                    <div class="list-group list-group-flush" id="expiring-container">
                         {% for item in expiring_soon %}
                         <a href="{% url 'inventory:waste_detail' item.waste_id %}" 
                            class="list-group-item list-group-item-action">
@@ -248,9 +212,9 @@
                             </div>
                         </a>
                         {% empty %}
-                        <div class="text-center py-4 text-muted">
-                            <i class="fas fa-check-circle mb-2"></i>
-                            <p class="mb-0">No items expiring soon</p>
+                        <div class="text-center py-4 text-muted" id="no-expiring-items">
+                            <i class="fas fa-info-circle mb-2 d-block"></i>
+                            <p class="mb-0">No items expiring soon. Upload items with expiry dates to see them here.</p>
                         </div>
                         {% endfor %}
                     </div>
@@ -263,24 +227,38 @@
                     <h5 class="mb-0">Status Distribution</h5>
                 </div>
                 <div class="card-body">
-                    {% for status in status_counts %}
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between mb-1">
-                            <span>{{ status.get_status_display }}</span>
-                            <span>{{ status.count }}</span>
-                        </div>
-                        <div class="progress" style="height: 6px;">
-                            <div class="progress-bar {% if status.status == 'AVAILABLE' %}bg-success
-                                                 {% elif status.status == 'PENDING_REVIEW' %}bg-warning
-                                                 {% elif status.status == 'RESERVED' %}bg-info
-                                                 {% elif status.status == 'USED' %}bg-secondary
-                                                 {% else %}bg-danger{% endif %}" 
-                                 role="progressbar" 
-                                 style="width: {{ status.count|mul:100|divisibleby:total_waste.total_items }}%">
+                    {% if status_counts %}
+                        {% for status in status_counts %}
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>
+                                    {% if status.status == 'AVAILABLE' %}Available
+                                    {% elif status.status == 'PENDING_REVIEW' %}Pending Review
+                                    {% elif status.status == 'RESERVED' %}Reserved
+                                    {% elif status.status == 'USED' %}Used
+                                    {% elif status.status == 'EXPIRED' %}Expired
+                                    {% else %}{{ status.status }}{% endif %}
+                                </span>
+                                <span>{{ status.count }}</span>
+                            </div>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar {% if status.status == 'AVAILABLE' %}bg-success
+                                                     {% elif status.status == 'PENDING_REVIEW' %}bg-warning
+                                                     {% elif status.status == 'RESERVED' %}bg-info
+                                                     {% elif status.status == 'USED' %}bg-secondary
+                                                     {% else %}bg-danger{% endif %}" 
+                                     role="progressbar" 
+                                     style="width: {% widthratio status.count total_waste.total_items 100 %}%">
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    {% endfor %}
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-3 text-muted">
+                            <i class="fas fa-chart-bar mb-2 d-block"></i>
+                            <p class="mb-0">No status data available</p>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -290,10 +268,189 @@
 
 {% block extra_js %}
 <script>
-    // Enable Bootstrap tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl)
-    })
+    document.addEventListener('DOMContentLoaded', function() {
+        // Enable tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl)
+        });
+        
+        // Fix any potential empty values
+        const availableCount = document.getElementById('available-count');
+        if (availableCount && availableCount.textContent.trim() === '') {
+            availableCount.textContent = '0';
+        }
+        
+        const pendingCount = document.getElementById('pending-count');
+        if (pendingCount && pendingCount.textContent.trim() === '') {
+            pendingCount.textContent = '0';
+        }
+        
+        // Remove any extra text or linebreaks in the counts
+        if (availableCount) {
+            availableCount.textContent = availableCount.textContent.trim();
+        }
+        
+        if (pendingCount) {
+            pendingCount.textContent = pendingCount.textContent.trim();
+        }
+        
+        // Refresh button listener
+        document.getElementById('refresh-activities').addEventListener('click', function() {
+            refreshActivities();
+        });
+        
+        // Automatically refresh activities and expiring items when page loads
+        refreshActivities();
+        loadExpiringItems();
+    });
+    
+    // Function to refresh activities using AJAX
+    function refreshActivities() {
+        const refreshBtn = document.getElementById('refresh-activities');
+        const activitiesContainer = document.getElementById('activities-container');
+        
+        // Show loading state
+        refreshBtn.disabled = true;
+        refreshBtn.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Loading...';
+        
+        // Make AJAX request to get updated activities
+        fetch('/inventory/api/activities/')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Activities data:', data);
+                
+                // Build the HTML for the activities
+                if (data.activities && data.activities.length > 0) {
+                    let html = '';
+                    
+                    data.activities.forEach(activity => {
+                        let badgeClass = 'bg-secondary';
+                        let statusDisplay = activity.status;
+                        
+                        switch(activity.status) {
+                            case 'AVAILABLE': 
+                                badgeClass = 'bg-success';
+                                statusDisplay = 'Available';
+                                break;
+                            case 'PENDING_REVIEW': 
+                                badgeClass = 'bg-warning';
+                                statusDisplay = 'Pending Review';
+                                break;
+                            case 'RESERVED': 
+                                badgeClass = 'bg-info';
+                                statusDisplay = 'Reserved';
+                                break;
+                            case 'USED': 
+                                badgeClass = 'bg-secondary';
+                                statusDisplay = 'Used';
+                                break;
+                            case 'EXPIRED': 
+                                badgeClass = 'bg-danger';
+                                statusDisplay = 'Expired';
+                                break;
+                        }
+                        
+                        html += `
+                        <tr>
+                            <td>
+                                <a href="/inventory/waste/${activity.waste_id}/" class="text-decoration-none">
+                                    ${activity.waste_id}
+                                </a>
+                            </td>
+                            <td><span class="badge ${badgeClass}">${statusDisplay}</span></td>
+                            <td>${activity.user_name}</td>
+                            <td>${activity.timestamp}</td>
+                        </tr>`;
+                    });
+                    
+                    activitiesContainer.innerHTML = html;
+                } else {
+                    activitiesContainer.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="text-center py-4 text-muted">
+                            <div id="no-activities-msg">
+                                <i class="fas fa-info-circle mb-2"></i><br>
+                                <span>No recent activities found. Try uploading new inventory items.</span>
+                            </div>
+                        </td>
+                    </tr>`;
+                }
+                
+                // Update the counts from the response
+                if (data.counts) {
+                    const availableCount = document.getElementById('available-count');
+                    const pendingCount = document.getElementById('pending-count');
+                    
+                    if (availableCount && data.counts.AVAILABLE !== undefined) {
+                        availableCount.textContent = data.counts.AVAILABLE;
+                    } else if (availableCount) {
+                        availableCount.textContent = '0';
+                    }
+                    
+                    if (pendingCount && data.counts.PENDING_REVIEW !== undefined) {
+                        pendingCount.textContent = data.counts.PENDING_REVIEW;
+                    } else if (pendingCount) {
+                        pendingCount.textContent = '0';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('error', 'Failed to refresh activities: ' + error.message);
+            })
+            .finally(() => {
+                // Reset button state
+                refreshBtn.disabled = false;
+                refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
+            });
+    }
+    
+    // Function to load expiring items
+    function loadExpiringItems() {
+        const expiringContainer = document.getElementById('expiring-container');
+        
+        // Make AJAX request to get expiring items
+        fetch('/inventory/api/expiring-soon/?days=30')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Expiring items data:', data);
+                
+                // Build the HTML for the expiring items
+                if (data.items && data.items.length > 0) {
+                    let html = '';
+                    
+                    data.items.forEach(item => {
+                        html += `
+                        <a href="/inventory/waste/${item.id}/" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">${item.id}</h6>
+                                    <small class="text-muted">${item.type} - ${item.material}</small>
+                                </div>
+                                <small class="text-danger">
+                                    Expires ${new Date(item.expiry_date).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'})}
+                                </small>
+                            </div>
+                        </a>`;
+                    });
+                    
+                    expiringContainer.innerHTML = html;
+                }
+            })
+            .catch(error => {
+                console.error('Error loading expiring items:', error);
+            });
+    }
 </script>
 {% endblock %}

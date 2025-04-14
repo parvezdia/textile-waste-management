@@ -69,9 +69,41 @@
                     </li>
                     
                     {% if user.is_authenticated and user.user_type == 'FACTORY' %}
+                    <!-- Expanded Inventory Navigation for Factory Users -->
+                    <li class="nav-item {% if 'inventory' in request.path and request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                        <a class="nav-link {% if 'inventory' in request.path and request.resolver_match.url_name == 'dashboard' %}active{% endif %}" 
+                           href="{% url 'inventory:dashboard' %}">
+                           <i class="fas fa-chart-pie me-1"></i>Dashboard
+                        </a>
+                    </li>
                     <li class="nav-item">
-                        <a class="nav-link {% if 'inventory' in request.path %}active{% endif %}" 
-                           href="{% url 'inventory:dashboard' %}">Inventory</a>
+                        <a class="nav-link {% if 'inventory' in request.path and request.resolver_match.url_name == 'waste_list' %}active{% endif %}" 
+                           href="{% url 'inventory:waste_list' %}">
+                           <i class="fas fa-boxes me-1"></i>Inventory Items
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'inventory' in request.path and request.resolver_match.url_name == 'upload_waste' %}active{% endif %}" 
+                           href="{% url 'inventory:upload_waste' %}">
+                           <i class="fas fa-upload me-1"></i>Upload Waste
+                        </a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if 'reports' in request.path or 'analytics' in request.path %}active{% endif %}" 
+                           href="#" id="reportsDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-file-alt me-1"></i>Reports
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'inventory:analytics' %}">
+                                <i class="fas fa-chart-bar me-2"></i>Analytics
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'inventory:factory_reports' %}">
+                                <i class="fas fa-history me-2"></i>Factory Reports
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'inventory:reports' %}">
+                                <i class="fas fa-file-export me-2"></i>Export Report
+                            </a></li>
+                        </ul>
                     </li>
                     {% endif %}
                     
