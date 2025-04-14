@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.core.paginator import Paginator
+from django.db import models
 from django.db.models import Count, Sum, Avg
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -336,13 +337,55 @@ def inventory_analytics(request):
         # Get latest 90 days for trend analytics
         end_date = timezone.now()
         start_date = end_date - timedelta(days=90)
-        # Get trends analysis for this factory (filter the result afterwards)
-        trends_data = get_trends_analysis(start_date, end_date)
+        # Get trends analysis for this factory
+        trends_data = get_trends_analysis(start_date, end_date, factory=request.user.factorypartner)
 
         # Get expiring inventory
         expiring_soon = get_expiring_inventory(
             days=30, factory=request.user.factorypartner
         )
+        
+        # Calculate average sustainability score
+        base_query = TextileWaste.objects.filter(factory=request.user.factorypartner)
+        sustainability_data = base_query.aggregate(
+            avg=models.Avg("sustainability_score"),
+            count=models.Count("id")
+        )
+        
+        avg_sustainability = sustainability_data["avg"] or 0
+        
+        # Convert from 0-100 scale to 0-10 scale for display
+        metrics["avg_sustainability"] = avg_sustainability / 10
+        
+        # Get status distribution for the chart
+        status_distribution = base_query.values("status").annotate(
+            count=models.Count("id")
+        ).order_by("status")
+        
+        # Format for JSON use in template
+        import json
+        status_labels = [item["status"] for item in status_distribution]
+        status_values = [item["count"] for item in status_distribution]
+        
+        # Get monthly trend data for the chart
+        monthly_data = []
+        monthly_labels = []
+        
+        # Get data for the last 6 months
+        for i in range(6):
+            month_end = end_date - timedelta(days=30 * i)
+            month_start = month_end - timedelta(days=30)
+            month_count = base_query.filter(date_added__range=[month_start, month_end]).count()
+            
+            # Format month for display
+            month_label = month_start.strftime("%b %Y")
+            
+            monthly_data.append(month_count)
+            monthly_labels.append(month_label)
+        
+        # Reverse to show oldest to newest
+        monthly_data.reverse()
+        monthly_labels.reverse()
 
         return render(
             request,
@@ -353,17 +396,75 @@ def inventory_analytics(request):
                 "trends": trends_data,
                 "expiring_soon": expiring_soon,
                 "factory_view": True,
+                "status_labels": json.dumps(status_labels),
+                "status_values": json.dumps(status_values),
+                "monthly_labels": json.dumps(monthly_labels),
+                "monthly_data": json.dumps(monthly_data),
             },
         )
     # For admin users with proper permissions, show all data
     elif request.user.has_perm("inventory.can_view_analytics"):
         metrics = get_inventory_metrics()
         efficiency_metrics = calculate_storage_efficiency()
+        
+        # Calculate average sustainability score for all items
+        base_query = TextileWaste.objects.all()
+        sustainability_data = base_query.aggregate(
+            avg=models.Avg("sustainability_score"),
+            count=models.Count("id")
+        )
+        
+        avg_sustainability = sustainability_data["avg"] or 0
+        
+        # Convert from 0-100 scale to 0-10 scale for display
+        metrics["avg_sustainability"] = avg_sustainability / 10
+        
+        # Get status distribution for the chart
+        status_distribution = base_query.values("status").annotate(
+            count=models.Count("id")
+        ).order_by("status")
+        
+        # Format for JSON use in template
+        import json
+        status_labels = [item["status"] for item in status_distribution]
+        status_values = [item["count"] for item in status_distribution]
+        
+        # Get monthly trend data
+        end_date = timezone.now()
+        start_date = end_date - timedelta(days=90)
+        trends_data = get_trends_analysis(start_date, end_date)
+        
+        # Get monthly trend data for the chart
+        monthly_data = []
+        monthly_labels = []
+        
+        # Get data for the last 6 months
+        for i in range(6):
+            month_end = end_date - timedelta(days=30 * i)
+            month_start = month_end - timedelta(days=30)
+            month_count = base_query.filter(date_added__range=[month_start, month_end]).count()
+            
+            # Format month for display
+            month_label = month_start.strftime("%b %Y")
+            
+            monthly_data.append(month_count)
+            monthly_labels.append(month_label)
+        
+        # Reverse to show oldest to newest
+        monthly_data.reverse()
+        monthly_labels.reverse()
 
         return render(
             request,
             "inventory/analytics.html",
-            {"metrics": metrics, "efficiency_metrics": efficiency_metrics},
+            {
+                "metrics": metrics,
+                "efficiency_metrics": efficiency_metrics,
+                "status_labels": json.dumps(status_labels),
+                "status_values": json.dumps(status_values),
+                "monthly_labels": json.dumps(monthly_labels),
+                "monthly_data": json.dumps(monthly_data),
+            },
         )
     else:
         # For other users without permission
@@ -659,6 +760,32 @@ def get_metrics(request):
         request.user.factorypartner if hasattr(request.user, "factorypartner") else None
     )
     metrics = get_inventory_metrics(factory=factory)
+    
+    # Make sure avg_sustainability is at the top level (not nested)
+    if "avg_sustainability" not in metrics:
+        # Calculate it directly if not already in metrics
+        base_query = TextileWaste.objects.all()
+        if factory:
+            base_query = base_query.filter(factory=factory)
+            
+        sustainability_data = base_query.aggregate(
+            avg=models.Avg("sustainability_score")
+        )
+        
+        avg_sustainability = sustainability_data["avg"] or 0
+        metrics["avg_sustainability"] = avg_sustainability / 10  # Convert to 0-10 scale
+    
+    # Add status distribution
+    base_query = TextileWaste.objects.all()
+    if factory:
+        base_query = base_query.filter(factory=factory)
+        
+    status_distribution = {}
+    for status_item in base_query.values('status').annotate(count=Count('id')):
+        status_distribution[status_item['status']] = status_item['count']
+    
+    metrics["status_distribution"] = status_distribution
+    
     return JsonResponse(metrics)
 
 
@@ -669,6 +796,30 @@ def get_storage_efficiency(request):
         request.user.factorypartner if hasattr(request.user, "factorypartner") else None
     )
     metrics = calculate_storage_efficiency(factory=factory)
+    
+    # Make sure turnover_rate is properly calculated and formatted
+    if "turnover_rate" in metrics and metrics["turnover_rate"] == 0:
+        # Recalculate turnover rate directly if it's zero
+        base_query = TextileWaste.objects
+        if factory:
+            base_query = base_query.filter(factory=factory)
+        
+        thirty_days_ago = timezone.now() - timedelta(days=30)
+        
+        used_items = base_query.filter(
+            status="USED", 
+            last_updated__gte=thirty_days_ago
+        ).count()
+        
+        available_items = base_query.filter(
+            status__in=["AVAILABLE", "RESERVED"]
+        ).count()
+        
+        total_items = available_items + used_items
+        
+        if total_items > 0:
+            metrics["turnover_rate"] = (used_items / total_items) * 100
+    
     return JsonResponse(metrics)
 
 

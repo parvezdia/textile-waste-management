@@ -96,20 +96,41 @@ def calculate_storage_efficiency(factory=None):
     # Calculate average days in storage
     now = timezone.now()
     total_days = sum((now - item.date_added).days for item in queryset)
-    avg_days = total_days / queryset.count()
+    avg_days = total_days / queryset.count() if queryset.count() > 0 else 0
 
-    # Calculate turnover rate
+    # Calculate turnover rate - improved calculation
     thirty_days_ago = now - timedelta(days=30)
-    used_items = TextileWaste.objects.filter(
-        status="USED", last_updated__gte=thirty_days_ago
+    
+    # Get items that were marked as USED in the last 30 days
+    used_items_query = TextileWaste.objects.filter(
+        status="USED", 
+        last_updated__gte=thirty_days_ago
     )
+    
+    # Add factory filter if provided
     if factory:
-        used_items = used_items.filter(factory=factory)
-
-    turnover_items = used_items.count()
-    total_items = queryset.count() + turnover_items
-    turnover_rate = (turnover_items / total_items * 100) if total_items > 0 else 0
-
+        used_items_query = used_items_query.filter(factory=factory)
+    
+    # Count the items and their total quantity
+    used_items_count = used_items_query.count()
+    used_items_quantity = used_items_query.aggregate(total=Sum('quantity'))['total'] or 0
+    
+    # Calculate available items
+    available_count = queryset.count()
+    available_quantity = current_usage
+    
+    # Calculate turnover rate based on both count and quantity
+    total_items = available_count + used_items_count
+    total_quantity = available_quantity + used_items_quantity
+    
+    # Use quantity-based turnover if available, otherwise fallback to count-based
+    if total_quantity > 0:
+        turnover_rate = (used_items_quantity / total_quantity * 100)
+    elif total_items > 0:
+        turnover_rate = (used_items_count / total_items * 100)
+    else:
+        turnover_rate = 0
+    
     # Get capacity breakdown
     capacity_breakdown = {}
     if factory:
@@ -136,7 +157,17 @@ def get_inventory_metrics(factory=None):
         "pending_review": base_query.filter(status="PENDING_REVIEW").count(),
         "efficiency": calculate_storage_efficiency(factory),
     }
-
+    
+    # Calculate average sustainability score directly
+    sustainability_data = base_query.aggregate(
+        avg=Avg("sustainability_score")
+    )
+    
+    avg_sustainability = sustainability_data["avg"] or 0
+    
+    # Convert from 0-100 scale to 0-10 scale for display
+    metrics["avg_sustainability"] = avg_sustainability / 10
+    
     # Add capacity recommendation if factory specified
     if factory:
         recommended = factory.factory_details.calculate_recommended_capacity()
