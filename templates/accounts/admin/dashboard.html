@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard | Textile Fabric Waste Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <h1 class="mb-4">Admin Dashboard</h1>
+    
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Factory Partners</h5>
+                </div>
+                <div class="card-body">
+                    <h2 class="display-4 text-center">{{ factory_count }}</h2>
+                    <p class="text-center">Total Factory Partners</p>
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4>{{ waste_count }}</h4>
+                            <p>Total Waste Items</p>
+                        </div>
+                        <div>
+                            <h4>{{ available_waste }} kg</h4>
+                            <p>Available Waste</p>
+                        </div>
+                    </div>
+                    <a href="{% url 'accounts:admin_factory_waste' %}" class="btn btn-primary btn-block mt-3">Manage Factory Waste</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">Designers</h5>
+                </div>
+                <div class="card-body">
+                    <h2 class="display-4 text-center">{{ designer_count }}</h2>
+                    <p class="text-center">Total Designers</p>
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4>{{ pending_designers }}</h4>
+                            <p>Pending Approval</p>
+                        </div>
+                        <div>
+                            <h4>{{ design_count }}</h4>
+                            <p>Total Designs</p>
+                        </div>
+                    </div>
+                    <a href="{% url 'accounts:admin_designers' %}" class="btn btn-success btn-block mt-3">Manage Designers</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">Buyers</h5>
+                </div>
+                <div class="card-body">
+                    <h2 class="display-4 text-center">{{ buyer_count }}</h2>
+                    <p class="text-center">Total Buyers</p>
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h4>{{ order_count }}</h4>
+                            <p>Total Orders</p>
+                        </div>
+                        <div>
+                            <h4>{{ pending_orders }}</h4>
+                            <p>Pending Orders</p>
+                        </div>
+                    </div>
+                    <a href="{% url 'accounts:admin_orders' %}" class="btn btn-info btn-block mt-3">Manage Orders</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-warning text-white">
+                    <h5 class="card-title mb-0">Analytics</h5>
+                </div>
+                <div class="card-body">
+                    <p>View detailed analytics and reports about the platform's performance, user engagement, and transaction data.</p>
+                    <a href="{% url 'accounts:admin_analytics' %}" class="btn btn-warning btn-block mt-3">View Analytics</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">Sustainability Metrics</h5>
+                </div>
+                <div class="card-body">
+                    <p>Monitor sustainability metrics, environmental impact, and waste recycling statistics.</p>
+                    <a href="{% url 'accounts:admin_sustainability' %}" class="btn btn-success btn-block mt-3">View Sustainability</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Highlight active nav item
+        $('nav .nav-link').removeClass('active');
+        $('nav .nav-link[href="{% url "accounts:admin_dashboard" %}"]').addClass('active');
+    });
+</script>
+{% endblock %}

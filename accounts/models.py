@@ -15,6 +15,7 @@ class User(AbstractUser):
         ("FACTORY", "Factory Partner"),
         ("DESIGNER", "Designer"),
         ("BUYER", "Buyer"),
+        ("ADMIN", "Admin"),
     ]
 
     email = models.EmailField(unique=True)

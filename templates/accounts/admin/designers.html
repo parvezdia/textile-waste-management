@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Designers | Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'accounts:admin_dashboard' %}">Admin Dashboard</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Designer Management</li>
+        </ol>
+    </nav>
+
+    <h1 class="mb-4">Designer Management</h1>
+    
+    <div class="card shadow-sm">
+        <div class="card-header bg-success text-white">
+            <h5 class="card-title mb-0">Designers</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" id="designersTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Designer Name</th>
+                            <th>Email</th>
+                            <th>Registered Date</th>
+                            <th>Status</th>
+                            <th>Designs</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for designer in designers %}
+                        <tr class="{% if not designer.is_approved %}table-warning{% else %}table-success{% endif %}">
+                            <td>{{ designer.id }}</td>
+                            <td>{{ designer.user.get_full_name|default:designer.user.username }}</td>
+                            <td>{{ designer.user.email }}</td>
+                            <td>{{ designer.user.date_registered|date:"M d, Y" }}</td>
+                            <td>
+                                <span class="badge {% if designer.is_approved %}bg-success{% else %}bg-warning{% endif %}">
+                                    {% if designer.is_approved %}Approved{% else %}Pending Approval{% endif %}
+                                </span>
+                            </td>
+                            <td>{{ designer.design_count }} ({{ designer.published_count }} published)</td>
+                            <td>
+                                <a href="{% url 'accounts:admin_designer_designs' designer_id=designer.id %}" class="btn btn-sm btn-info">
+                                    <i class="fas fa-images"></i> View Designs
+                                </a>
+                                {% if not designer.is_approved %}
+                                <button 
+                                    class="btn btn-sm btn-success approve-btn" 
+                                    data-id="{{ designer.id }}"
+                                    data-name="{{ designer.user.get_full_name|default:designer.user.username }}"
+                                >
+                                    <i class="fas fa-check"></i> Approve
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center">No designers found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Initialize DataTable
+        $('#designersTable').DataTable({
+            order: [[3, 'desc']], // Sort by registration date descending
+            columnDefs: [
+                { orderable: false, targets: 6 } // Disable sorting for actions column
+            ]
+        });
+        
+        // Handle approve button click
+        $('.approve-btn').click(function() {
+            const designerId = $(this).data('id');
+            const designerName = $(this).data('name');
+            
+            // Show confirmation using SweetAlert2
+            Swal.fire({
+                title: 'Approve Designer?',
+                text: `Are you sure you want to approve "${designerName}"?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, approve!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Send AJAX request to approve designer
+                    $.ajax({
+                        url: '{% url "accounts:admin_approve_designer" designer_id=999 %}'.replace('999', designerId),
+                        type: 'POST',
+                        headers: {
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        success: function(response) {
+                            if (response.status === 'success') {
+                                Swal.fire({
+                                    title: 'Approved!',
+                                    text: response.message,
+                                    icon: 'success'
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire({
+                                    title: 'Error!',
+                                    text: response.message,
+                                    icon: 'error'
+                                });
+                            }
+                        },
+                        error: function() {
+                            Swal.fire({
+                                title: 'Error!',
+                                text: 'Something went wrong. Please try again.',
+                                icon: 'error'
+                            });
+                        }
+                    });
+                }
+            });
+        });
+        
+        // Helper function to get CSRF token from cookies
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    });
+</script>
+{% endblock %}

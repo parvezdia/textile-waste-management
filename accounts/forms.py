@@ -2,7 +2,7 @@ from django import forms
 from django.contrib.auth import authenticate
 from django.contrib.auth.forms import UserCreationForm
 
-from .models import Buyer, ContactInfo, Designer, FactoryDetails, FactoryPartner, User
+from .models import Admin, AdminLevel, Buyer, ContactInfo, Designer, FactoryDetails, FactoryPartner, User
 
 
 class UserRegistrationForm(UserCreationForm):
@@ -158,3 +158,14 @@ class BuyerForm(forms.ModelForm):
         model = Buyer
         fields = ["preferences"]
         widgets = {"preferences": forms.Select(attrs={"class": "form-control"})}
+
+
+class AdminForm(forms.ModelForm):
+    admin_level = forms.ChoiceField(
+        choices=AdminLevel.choices,
+        widget=forms.Select(attrs={"class": "form-control"}),
+    )
+    
+    class Meta:
+        model = Admin
+        fields = ["admin_level"]

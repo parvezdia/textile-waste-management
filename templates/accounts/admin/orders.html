@@ -1,0 +1,340 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Orders | Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'accounts:admin_dashboard' %}">Admin Dashboard</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Order Management</li>
+        </ol>
+    </nav>
+
+    <h1 class="mb-4">Order Management</h1>
+    
+    <div class="card shadow-sm">
+        <div class="card-header bg-info text-white">
+            <h5 class="card-title mb-0">Orders</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" id="ordersTable">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Buyer</th>
+                            <th>Design</th>
+                            <th>Designer</th>
+                            <th>Date</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in orders %}
+                        <tr class="{% if order.status == 'PENDING' %}table-warning{% elif order.status == 'PROCESSING' %}table-primary{% elif order.status == 'SHIPPED' %}table-info{% elif order.status == 'DELIVERED' %}table-success{% elif order.status == 'CANCELLED' %}table-danger{% endif %}">
+                            <td>#{{ order.id }}</td>
+                            <td>{{ order.buyer.user.get_full_name|default:order.buyer.user.username }}</td>
+                            <td>{{ order.design.title }}</td>
+                            <td>{{ order.design.designer.user.get_full_name|default:order.design.designer.user.username }}</td>
+                            <td>{{ order.order_date|date:"M d, Y" }}</td>
+                            <td>${{ order.total_price }}</td>
+                            <td>
+                                <span class="badge {% if order.status == 'PENDING' %}bg-warning{% elif order.status == 'PROCESSING' %}bg-primary{% elif order.status == 'SHIPPED' %}bg-info{% elif order.status == 'DELIVERED' %}bg-success{% elif order.status == 'CANCELLED' %}bg-danger{% endif %}">
+                                    {{ order.status }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton{{ order.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                        Actions
+                                    </button>
+                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton{{ order.id }}">
+                                        <li>
+                                            <button class="dropdown-item view-details-btn" data-id="{{ order.id }}">
+                                                <i class="fas fa-eye"></i> View Details
+                                            </button>
+                                        </li>
+                                        {% if order.status == 'PENDING' %}
+                                        <li>
+                                            <button class="dropdown-item approve-payment-btn" data-id="{{ order.id }}">
+                                                <i class="fas fa-check-circle"></i> Approve Payment
+                                            </button>
+                                        </li>
+                                        {% endif %}
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li class="dropdown-header">Update Status</li>
+                                        {% if order.status != 'PENDING' %}
+                                        <li>
+                                            <button class="dropdown-item status-btn" data-id="{{ order.id }}" data-status="PENDING">
+                                                <span class="badge bg-warning">PENDING</span>
+                                            </button>
+                                        </li>
+                                        {% endif %}
+                                        {% if order.status != 'PROCESSING' %}
+                                        <li>
+                                            <button class="dropdown-item status-btn" data-id="{{ order.id }}" data-status="PROCESSING">
+                                                <span class="badge bg-primary">PROCESSING</span>
+                                            </button>
+                                        </li>
+                                        {% endif %}
+                                        {% if order.status != 'SHIPPED' %}
+                                        <li>
+                                            <button class="dropdown-item status-btn" data-id="{{ order.id }}" data-status="SHIPPED">
+                                                <span class="badge bg-info">SHIPPED</span>
+                                            </button>
+                                        </li>
+                                        {% endif %}
+                                        {% if order.status != 'DELIVERED' %}
+                                        <li>
+                                            <button class="dropdown-item status-btn" data-id="{{ order.id }}" data-status="DELIVERED">
+                                                <span class="badge bg-success">DELIVERED</span>
+                                            </button>
+                                        </li>
+                                        {% endif %}
+                                        {% if order.status != 'CANCELLED' %}
+                                        <li>
+                                            <button class="dropdown-item status-btn" data-id="{{ order.id }}" data-status="CANCELLED">
+                                                <span class="badge bg-danger">CANCELLED</span>
+                                            </button>
+                                        </li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center">No orders found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Order Details Modal -->
+<div class="modal fade" id="orderDetailsModal" tabindex="-1" aria-labelledby="orderDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="orderDetailsModalLabel">Order Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Order Information</h6>
+                        <p><strong>Order ID:</strong> <span id="orderDetailId"></span></p>
+                        <p><strong>Date:</strong> <span id="orderDetailDate"></span></p>
+                        <p><strong>Status:</strong> <span id="orderDetailStatus"></span></p>
+                        <p><strong>Total:</strong> $<span id="orderDetailTotal"></span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Buyer Information</h6>
+                        <p><strong>Name:</strong> <span id="orderDetailBuyer"></span></p>
+                        <p><strong>Email:</strong> <span id="orderDetailEmail"></span></p>
+                        <p><strong>Phone:</strong> <span id="orderDetailPhone"></span></p>
+                        <p><strong>Address:</strong> <span id="orderDetailAddress"></span></p>
+                    </div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-md-12">
+                        <h6>Design Information</h6>
+                        <p><strong>Design:</strong> <span id="orderDetailDesign"></span></p>
+                        <p><strong>Designer:</strong> <span id="orderDetailDesigner"></span></p>
+                        <p><strong>Description:</strong> <span id="orderDetailDescription"></span></p>
+                    </div>
+                </div>
+                <hr>
+                <div class="row">
+                    <div class="col-md-12">
+                        <h6>Payment Information</h6>
+                        <p><strong>Payment Method:</strong> <span id="orderDetailPaymentMethod"></span></p>
+                        <p><strong>Payment Status:</strong> <span id="orderDetailPaymentStatus"></span></p>
+                        <p><strong>Transaction ID:</strong> <span id="orderDetailTransactionId"></span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Initialize DataTable
+        $('#ordersTable').DataTable({
+            order: [[4, 'desc']], // Sort by date descending
+            columnDefs: [
+                { orderable: false, targets: 7 } // Disable sorting for actions column
+            ]
+        });
+        
+        // Handle view details button click
+        $('.view-details-btn').click(function() {
+            const orderId = $(this).data('id');
+            
+            // In a real application, you would fetch the order details via AJAX
+            // For now, we'll just simulate this with dummy data
+            $('#orderDetailId').text(orderId);
+            $('#orderDetailDate').text('April 10, 2025'); // Simulated data
+            $('#orderDetailStatus').text('PENDING');
+            $('#orderDetailTotal').text('149.99');
+            $('#orderDetailBuyer').text('John Doe');
+            $('#orderDetailEmail').text('john.doe@example.com');
+            $('#orderDetailPhone').text('+1234567890');
+            $('#orderDetailAddress').text('123 Main St, Anytown, CA 12345');
+            $('#orderDetailDesign').text('Eco-friendly T-shirt Design');
+            $('#orderDetailDesigner').text('Jane Smith');
+            $('#orderDetailDescription').text('Sustainable t-shirt made from recycled fabric waste');
+            $('#orderDetailPaymentMethod').text('Credit Card');
+            $('#orderDetailPaymentStatus').text('Pending Verification');
+            $('#orderDetailTransactionId').text('TXN' + Math.floor(Math.random() * 1000000));
+            
+            // Show the modal
+            $('#orderDetailsModal').modal('show');
+        });
+        
+        // Handle approve payment button click
+        $('.approve-payment-btn').click(function() {
+            const orderId = $(this).data('id');
+            
+            // Show confirmation using SweetAlert2
+            Swal.fire({
+                title: 'Approve Payment?',
+                text: `Are you sure you want to approve payment for order #${orderId}?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, approve it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Send AJAX request to approve payment
+                    $.ajax({
+                        url: '{% url "accounts:admin_approve_payment" order_id=999 %}'.replace('999', orderId),
+                        type: 'POST',
+                        headers: {
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        success: function(response) {
+                            if (response.status === 'success') {
+                                Swal.fire({
+                                    title: 'Approved!',
+                                    text: response.message,
+                                    icon: 'success'
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire({
+                                    title: 'Error!',
+                                    text: response.message,
+                                    icon: 'error'
+                                });
+                            }
+                        },
+                        error: function() {
+                            Swal.fire({
+                                title: 'Error!',
+                                text: 'Something went wrong. Please try again.',
+                                icon: 'error'
+                            });
+                        }
+                    });
+                }
+            });
+        });
+        
+        // Handle status update button click
+        $('.status-btn').click(function() {
+            const orderId = $(this).data('id');
+            const status = $(this).data('status');
+            
+            // Status names for better readability
+            const statusNames = {
+                'PENDING': 'Pending',
+                'PROCESSING': 'Processing',
+                'SHIPPED': 'Shipped',
+                'DELIVERED': 'Delivered',
+                'CANCELLED': 'Cancelled'
+            };
+            
+            // Show confirmation using SweetAlert2
+            Swal.fire({
+                title: 'Update Order Status?',
+                text: `Are you sure you want to update order #${orderId} status to ${statusNames[status]}?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, update it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Send AJAX request to update status
+                    $.ajax({
+                        url: '{% url "accounts:admin_update_order_status" order_id=999 %}'.replace('999', orderId),
+                        type: 'POST',
+                        headers: {
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        data: {
+                            status: status
+                        },
+                        success: function(response) {
+                            if (response.status === 'success') {
+                                Swal.fire({
+                                    title: 'Updated!',
+                                    text: response.message,
+                                    icon: 'success'
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire({
+                                    title: 'Error!',
+                                    text: response.message,
+                                    icon: 'error'
+                                });
+                            }
+                        },
+                        error: function() {
+                            Swal.fire({
+                                title: 'Error!',
+                                text: 'Something went wrong. Please try again.',
+                                icon: 'error'
+                            });
+                        }
+                    });
+                }
+            });
+        });
+        
+        // Helper function to get CSRF token from cookies
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    });
+</script>
+{% endblock %}

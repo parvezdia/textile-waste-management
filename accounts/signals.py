@@ -6,6 +6,8 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 from .models import (
+    Admin,
+    AdminLevel,
     Buyer,
     BuyerPreferences,
     ContactInfo,
@@ -29,9 +31,14 @@ def create_user_profile(sender, instance, created, **kwargs):
                 instance.contact_info = contact_info
                 instance.save()
 
+            # For superusers created via createsuperuser, set user_type to ADMIN
+            if instance.is_superuser and not instance.user_type:
+                instance.user_type = "ADMIN"
+                instance.save(update_fields=['user_type'])
+                
             # Create role-specific profile based on user_type
             if instance.user_type == "FACTORY":
-                if not hasattr(instance, "factory_partner"):
+                if not hasattr(instance, "factorypartner"):
                     factory_details = FactoryDetails.objects.create()
                     FactoryPartner.objects.create(
                         user=instance, factory_details=factory_details
@@ -46,6 +53,12 @@ def create_user_profile(sender, instance, created, **kwargs):
                 if not hasattr(instance, "buyer"):
                     preferences = BuyerPreferences.objects.create()
                     Buyer.objects.create(user=instance, preferences=preferences)
+            elif instance.user_type == "ADMIN":
+                if not hasattr(instance, "admin"):
+                    Admin.objects.create(
+                        user=instance,
+                        admin_level=AdminLevel.SUPER_ADMIN if instance.is_superuser else AdminLevel.JUNIOR
+                    )
 
 
 @receiver(post_save, sender=User)
@@ -63,6 +76,8 @@ def save_user_profile(sender, instance, **kwargs):
             instance.designer.save()
         elif hasattr(instance, "buyer"):
             instance.buyer.save()
+        elif hasattr(instance, "admin"):
+            instance.admin.save()
 
 
 @receiver(post_save, sender=ContactInfo)

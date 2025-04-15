@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics Dashboard | Admin Dashboard{% endblock %}
+
+{% block head_extra %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'accounts:admin_dashboard' %}">Admin Dashboard</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Analytics</li>
+        </ol>
+    </nav>
+
+    <h1 class="mb-4">Analytics Dashboard</h1>
+    
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Material Type Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="materialChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">Design Status Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="designChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">Monthly Orders and Revenue</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="revenueChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-warning text-white">
+                    <h5 class="card-title mb-0">Order Status Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="orderChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="card-title mb-0">Top Factories by Waste Quantity</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Factory Name</th>
+                                    <th>Total Waste (kg)</th>
+                                    <th>Available (%)</th>
+                                    <th>Recycled (%)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in waste_by_material|slice:":5" %}
+                                <tr>
+                                    <td>{{ item.factory_partner__factory_details__factory_name|default:"Unknown" }}</td>
+                                    <td>{{ item.total_quantity }}</td>
+                                    <td>{{ item.available_percent|floatformat:1 }}%</td>
+                                    <td>{{ item.recycled_percent|floatformat:1 }}%</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">No data available</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Material chart
+        const materialCtx = document.getElementById('materialChart').getContext('2d');
+        const materialChart = new Chart(materialCtx, {
+            type: 'pie',
+            data: {
+                labels: [{% for item in waste_by_material %}'{{ item.material_type }}',{% endfor %}],
+                datasets: [{
+                    data: [{% for item in waste_by_material %}{{ item.total_quantity }},{% endfor %}],
+                    backgroundColor: [
+                        '#4CAF50', '#2196F3', '#FF9800', '#F44336', '#9C27B0',
+                        '#3F51B5', '#E91E63', '#009688', '#673AB7', '#FFEB3B'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    title: {
+                        display: true,
+                        text: 'Distribution by Material Type (kg)'
+                    }
+                }
+            }
+        });
+        
+        // Design chart
+        const designCtx = document.getElementById('designChart').getContext('2d');
+        const designChart = new Chart(designCtx, {
+            type: 'doughnut',
+            data: {
+                labels: [{% for item in designs_by_status %}'{{ item.status }}',{% endfor %}],
+                datasets: [{
+                    data: [{% for item in designs_by_status %}{{ item.count }},{% endfor %}],
+                    backgroundColor: [
+                        '#4CAF50', '#2196F3', '#FF9800', '#F44336', '#9C27B0'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    title: {
+                        display: true,
+                        text: 'Distribution by Design Status'
+                    }
+                }
+            }
+        });
+        
+        // Order chart
+        const orderCtx = document.getElementById('orderChart').getContext('2d');
+        const orderChart = new Chart(orderCtx, {
+            type: 'pie',
+            data: {
+                labels: [{% for item in orders_by_status %}'{{ item.status }}',{% endfor %}],
+                datasets: [{
+                    data: [{% for item in orders_by_status %}{{ item.count }},{% endfor %}],
+                    backgroundColor: [
+                        '#4CAF50', '#2196F3', '#FF9800', '#F44336', '#9C27B0'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    title: {
+                        display: true,
+                        text: 'Distribution by Order Status'
+                    }
+                }
+            }
+        });
+        
+        // Revenue chart
+        const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+        const revenueChart = new Chart(revenueCtx, {
+            type: 'bar',
+            data: {
+                labels: [{% for item in monthly_orders %}'{{ item.month }}',{% endfor %}],
+                datasets: [{
+                    label: 'Orders',
+                    data: [{% for item in monthly_orders %}{{ item.count }},{% endfor %}],
+                    backgroundColor: 'rgba(33, 150, 243, 0.5)',
+                    borderColor: 'rgba(33, 150, 243, 1)',
+                    borderWidth: 1,
+                    yAxisID: 'y-orders'
+                }, {
+                    label: 'Revenue ($)',
+                    data: [{% for item in monthly_orders %}{{ item.revenue }},{% endfor %}],
+                    type: 'line',
+                    fill: false,
+                    backgroundColor: 'rgba(76, 175, 80, 0.5)',
+                    borderColor: 'rgba(76, 175, 80, 1)',
+                    borderWidth: 2,
+                    yAxisID: 'y-revenue'
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    'y-orders': {
+                        type: 'linear',
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Number of Orders'
+                        }
+                    },
+                    'y-revenue': {
+                        type: 'linear',
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Revenue ($)'
+                        },
+                        grid: {
+                            drawOnChartArea: false
+                        }
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Monthly Orders and Revenue'
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

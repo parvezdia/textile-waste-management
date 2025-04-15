@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+
+{% block title %}Sustainability Metrics | Admin Dashboard{% endblock %}
+
+{% block head_extra %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'accounts:admin_dashboard' %}">Admin Dashboard</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Sustainability Metrics</li>
+        </ol>
+    </nav>
+
+    <h1 class="mb-4">Sustainability Metrics</h1>
+    
+    <div class="text-end mb-3">
+        <a href="{% url 'accounts:generate_sustainability_report' %}" class="btn btn-success">
+            <i class="fas fa-download"></i> Generate Excel Report
+        </a>
+    </div>
+    
+    <!-- Key Metrics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body text-center">
+                    <h3>{{ total_waste|floatformat:0 }}</h3>
+                    <p class="mb-0">Total Textile Waste (kg)</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body text-center">
+                    <h3>{{ recycled_waste|floatformat:0 }}</h3>
+                    <p class="mb-0">Recycled Waste (kg)</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body text-center">
+                    <h3>{{ co2_reduction|floatformat:0 }}</h3>
+                    <p class="mb-0">CO₂ Reduction (kg)</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white h-100">
+                <div class="card-body text-center">
+                    <h3>{{ water_savings|floatformat:0 }}</h3>
+                    <p class="mb-0">Water Savings (liters)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recycling Rate Chart -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Waste Recycling Progress</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="recyclingChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">Recycling Breakdown</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-center align-items-center h-100">
+                        <canvas id="recyclingBreakdownChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Factory Utilization Rates -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">Factory Waste Utilization Rates</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="factoryTable">
+                            <thead>
+                                <tr>
+                                    <th>Factory Name</th>
+                                    <th>Total Waste (kg)</th>
+                                    <th>Recycled (kg)</th>
+                                    <th>Utilization Rate</th>
+                                    <th>Progress</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for factory in waste_by_factory %}
+                                <tr>
+                                    <td>{{ factory.factory__factory_details__factory_name|default:"Unknown" }}</td>
+                                    <td>{{ factory.total|floatformat:0 }}</td>
+                                    <td>{{ factory.recycled|floatformat:0|default:"0" }}</td>
+                                    <td>{{ factory.utilization_rate|floatformat:1 }}%</td>
+                                    <td>
+                                        <div class="progress">
+                                            <div class="progress-bar bg-success" role="progressbar" 
+                                                 style="width: {{ factory.utilization_rate }}%;" 
+                                                 aria-valuenow="{{ factory.utilization_rate }}" 
+                                                 aria-valuemin="0" aria-valuemax="100">
+                                                {{ factory.utilization_rate|floatformat:1 }}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center">No factory data available</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Environmental Impact -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">Environmental Impact</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title">CO₂ Reduction</h5>
+                                    <p class="card-text">
+                                        <span class="display-5">{{ co2_reduction|floatformat:0 }}</span> kg
+                                    </p>
+                                    <p class="card-text text-muted">
+                                        Equivalent to 
+                                        <strong>{{ co2_reduction_trees|default:0|floatformat:0 }}</strong> 
+                                        trees planted per year
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h5 class="card-title">Water Savings</h5>
+                                    <p class="card-text">
+                                        <span class="display-5">{{ water_savings|floatformat:0 }}</span> L
+                                    </p>
+                                    <p class="card-text text-muted">
+                                        Equivalent to 
+                                        <strong>{{ water_savings_households|default:0|floatformat:0 }}</strong>
+                                        households' daily water usage
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Sustainability Goals Progress</h5>
+                </div>
+                <div class="card-body">
+                    <h6>Recycling Target (50% of total waste)</h6>
+                    <div class="progress mb-4" style="height: 25px;">
+                        <div class="progress-bar {% if recycled_percentage >= 50 %}bg-success{% else %}bg-warning{% endif %}" 
+                             role="progressbar" style="width: {{ recycled_percentage|default:0 }}%;" 
+                             aria-valuenow="{{ recycled_waste|default:0 }}" aria-valuemin="0" aria-valuemax="{{ total_waste|default:0 }}">
+                            {{ recycled_percentage|default:0|floatformat:1 }}%
+                        </div>
+                    </div>
+                    
+                    <h6>CO₂ Reduction Target (1000 kg)</h6>
+                    <div class="progress mb-4" style="height: 25px;">
+                        <div class="progress-bar {% if co2_reduction >= 1000 %}bg-success{% else %}bg-info{% endif %}" 
+                             role="progressbar" style="width: {{ co2_percentage|default:0 }}%;" 
+                             aria-valuenow="{{ co2_reduction|default:0 }}" aria-valuemin="0" aria-valuemax="1000">
+                            {{ co2_reduction|floatformat:0 }} / 1000 kg
+                        </div>
+                    </div>
+                    
+                    <h6>Water Savings Target (100,000 liters)</h6>
+                    <div class="progress" style="height: 25px;">
+                        <div class="progress-bar {% if water_savings >= 100000 %}bg-success{% else %}bg-primary{% endif %}" 
+                             role="progressbar" style="width: {{ water_percentage|default:0 }}%;" 
+                             aria-valuenow="{{ water_savings|default:0 }}" aria-valuemin="0" aria-valuemax="100000">
+                            {{ water_savings|floatformat:0 }} / 100,000 L
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Initialize DataTable for factory table
+        $('#factoryTable').DataTable({
+            order: [[3, 'desc']], // Sort by utilization rate descending
+            pageLength: 5
+        });
+        
+        // Recycling progress chart
+        const recyclingCtx = document.getElementById('recyclingChart').getContext('2d');
+        const recyclingChart = new Chart(recyclingCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Total Waste', 'Recycled Waste'],
+                datasets: [{
+                    label: 'Amount (kg)',
+                    data: [{{ total_waste|default:0 }}, {{ recycled_waste|default:0 }}],
+                    backgroundColor: [
+                        'rgba(255, 193, 7, 0.5)', // Yellow for total waste
+                        'rgba(76, 175, 80, 0.5)'  // Green for recycled waste
+                    ],
+                    borderColor: [
+                        'rgba(255, 193, 7, 1)',
+                        'rgba(76, 175, 80, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Kilograms (kg)'
+                        }
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Waste Collection vs. Recycling'
+                    }
+                }
+            }
+        });
+        
+        // Recycling breakdown chart
+        const recyclingBreakdownCtx = document.getElementById('recyclingBreakdownChart').getContext('2d');
+        const recyclingBreakdownChart = new Chart(recyclingBreakdownCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Recycled', 'Not Recycled'],
+                datasets: [{
+                    data: [
+                        {{ recycled_waste|default:0 }}, 
+                        {% if total_waste > recycled_waste %}{{ total_waste|default:0|add:"-"|add:recycled_waste|default:0 }}{% else %}0{% endif %}
+                    ],
+                    backgroundColor: [
+                        'rgba(76, 175, 80, 0.7)', // Green for recycled
+                        'rgba(244, 67, 54, 0.7)'  // Red for not recycled
+                    ],
+                    borderColor: [
+                        'rgba(76, 175, 80, 1)',
+                        'rgba(244, 67, 54, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Recycling Rate'
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

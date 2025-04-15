@@ -134,6 +134,39 @@
                     </li>
                     {% endif %}
                     
+                    {% if user.is_authenticated and user.user_type == 'ADMIN' %}
+                    <!-- Admin Navigation -->
+                    <li class="nav-item">
+                        <a class="nav-link {% if 'admin/dashboard' in request.path %}active{% endif %}" 
+                           href="{% url 'accounts:admin_dashboard' %}">
+                           <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if 'admin' in request.path and 'dashboard' not in request.path %}active{% endif %}" 
+                           href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-cog me-1"></i>Admin Tools
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'accounts:admin_factory_waste' %}">
+                                <i class="fas fa-boxes me-2"></i>Factory Waste
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'accounts:admin_designers' %}">
+                                <i class="fas fa-user-edit me-2"></i>Designers
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'accounts:admin_orders' %}">
+                                <i class="fas fa-shopping-cart me-2"></i>Orders
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'accounts:admin_analytics' %}">
+                                <i class="fas fa-chart-bar me-2"></i>Analytics
+                            </a></li>
+                            <li><a class="dropdown-item" href="{% url 'accounts:admin_sustainability' %}">
+                                <i class="fas fa-leaf me-2"></i>Sustainability
+                            </a></li>
+                        </ul>
+                    </li>
+                    {% endif %}
+                    
                     {% if user.is_authenticated %}
                     <li class="nav-item me-3">
                         <a href="{% url 'notifications:notification_list' %}" class="nav-link position-relative">
@@ -153,6 +186,8 @@
                             <span class="badge bg-info">Designer</span>
                             {% elif user.user_type == 'BUYER' %}
                             <span class="badge bg-warning">Buyer</span>
+                            {% elif user.user_type == 'ADMIN' %}
+                            <span class="badge bg-danger">Admin</span>
                             {% endif %}
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
@@ -302,7 +337,7 @@
         }
     </script>
     {% if user.is_authenticated %}
-    <script src="{{ STATIC_URL }}js/realtime-notifications.js"></script>
+    <script src="/static/js/realtime-notifications.js"></script>
     {% endif %}
     {% block extra_templates %}{% endblock %}
 </body>
