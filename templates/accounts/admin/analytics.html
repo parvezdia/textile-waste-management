@@ -82,12 +82,12 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for item in waste_by_material|slice:":5" %}
+                                {% for factory in top_factories %}
                                 <tr>
-                                    <td>{{ item.factory_partner__factory_details__factory_name|default:"Unknown" }}</td>
-                                    <td>{{ item.total_quantity }}</td>
-                                    <td>{{ item.available_percent|floatformat:1 }}%</td>
-                                    <td>{{ item.recycled_percent|floatformat:1 }}%</td>
+                                    <td>{{ factory.factory_details.factory_name|default:"Unknown" }}</td>
+                                    <td>{{ factory.total_quantity|default:"0" }}</td>
+                                    <td>{{ factory.available_percent|floatformat:1 }}%</td>
+                                    <td>{{ factory.recycled_percent|floatformat:1 }}%</td>
                                 </tr>
                                 {% empty %}
                                 <tr>
@@ -112,7 +112,7 @@
         const materialChart = new Chart(materialCtx, {
             type: 'pie',
             data: {
-                labels: [{% for item in waste_by_material %}'{{ item.material_type }}',{% endfor %}],
+                labels: [{% for item in waste_by_material %}'{{ item.material }}',{% endfor %}],
                 datasets: [{
                     data: [{% for item in waste_by_material %}{{ item.total_quantity }},{% endfor %}],
                     backgroundColor: [

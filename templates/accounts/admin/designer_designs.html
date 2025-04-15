@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+
+{% block title %}Designer Designs | Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'accounts:admin_dashboard' %}">Admin Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'accounts:admin_designers' %}">Designer Management</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ designer.user.get_full_name|default:designer.user.username }}'s Designs</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Designs by {{ designer.user.get_full_name|default:designer.user.username }}</h1>
+        <span class="badge {% if designer.is_approved %}bg-success{% else %}bg-warning{% endif %} fs-6">
+            {% if designer.is_approved %}Approved Designer{% else %}Pending Approval{% endif %}
+        </span>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Designer Information</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Email:</strong> {{ designer.user.email }}</p>
+                    <p><strong>Phone:</strong> {{ designer.user.contact_info.phone|default:"Not provided" }}</p>
+                    <p><strong>Address:</strong> {{ designer.user.contact_info.address|default:"Not provided" }}</p>
+                    <p><strong>Specialization:</strong> {{ designer.specialization|default:"Not specified" }}</p>
+                    <p><strong>Registration Date:</strong> {{ designer.user.date_registered|date:"F d, Y" }}</p>
+                    {% if designer.is_approved %}
+                    <p><strong>Approval Date:</strong> {{ designer.approval_date|date:"F d, Y" }}</p>
+                    {% endif %}
+                </div>
+                <div class="card-footer">
+                    {% if not designer.is_approved %}
+                    <button 
+                        class="btn btn-success approve-btn w-100" 
+                        data-id="{{ designer.id }}"
+                        data-name="{{ designer.user.get_full_name|default:designer.user.username }}"
+                    >
+                        <i class="fas fa-check-circle"></i> Approve Designer
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">Design Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded mb-3">
+                                <h3>{{ designs.count }}</h3>
+                                <p class="mb-0">Total Designs</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded mb-3">
+                                <h3>{{ designs.last.date_created|date:"M d, Y"|default:"N/A" }}</h3>
+                                <p class="mb-0">Latest Design</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 border rounded mb-3">
+                                <h3>0</h3>
+                                <p class="mb-0">Most Views</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-info text-white">
+            <h5 class="card-title mb-0">All Designs ({{ designs|length }})</h5>
+        </div>
+        <div class="card-body">
+            {% if designs %}
+            <div class="table-responsive">
+                <table class="table table-hover" id="designsTable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Thumbnail</th>
+                            <th>Title</th>
+                            <th>Status</th>
+                            <th>Date Created</th>
+                            <th>Views</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for design in designs %}
+                        <tr>
+                            <td>{{ design.id }}</td>
+                            <td>
+                                {% if design.thumbnail %}
+                                <img src="{{ design.thumbnail.url }}" alt="{{ design.title }}" width="50" height="50" class="rounded">
+                                {% else %}
+                                <div class="bg-light rounded text-center" style="width: 50px; height: 50px;">
+                                    <i class="fas fa-image text-muted mt-2"></i>
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td>{{ design.title }}</td>
+                            <td>
+                                <span class="badge 
+                                    {% if design.status == 'PUBLISHED' %}bg-success
+                                    {% elif design.status == 'PENDING' %}bg-warning
+                                    {% elif design.status == 'REJECTED' %}bg-danger
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ design.status }}
+                                </span>
+                            </td>
+                            <td>{{ design.date_created|date:"M d, Y" }}</td>
+                            <td>{{ design.view_count|default:"0" }}</td>
+                            <td>
+                                <a href="{% url 'designs:design_detail' design_id=design.id %}" class="btn btn-sm btn-primary" target="_blank">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                This designer hasn't created any designs yet.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // Initialize DataTable if there are designs
+        {% if designs %}
+        $('#designsTable').DataTable({
+            order: [[4, 'desc']], // Sort by date created descending
+            columnDefs: [
+                { orderable: false, targets: [1, 6] } // Disable sorting for thumbnail and actions columns
+            ]
+        });
+        {% endif %}
+        
+        // Handle approve button click
+        $('.approve-btn').click(function() {
+            const designerId = $(this).data('id');
+            const designerName = $(this).data('name');
+            
+            // Show confirmation using SweetAlert2
+            Swal.fire({
+                title: 'Approve Designer?',
+                text: `Are you sure you want to approve "${designerName}"?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Yes, approve!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Send AJAX request to approve designer
+                    $.ajax({
+                        url: '{% url "accounts:admin_approve_designer" designer_id=999 %}'.replace('999', designerId),
+                        type: 'POST',
+                        headers: {
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        success: function(response) {
+                            if (response.status === 'success') {
+                                Swal.fire({
+                                    title: 'Approved!',
+                                    text: response.message,
+                                    icon: 'success'
+                                }).then(() => {
+                                    location.reload();
+                                });
+                            } else {
+                                Swal.fire({
+                                    title: 'Error!',
+                                    text: response.message,
+                                    icon: 'error'
+                                });
+                            }
+                        },
+                        error: function() {
+                            Swal.fire({
+                                title: 'Error!',
+                                text: 'Something went wrong. Please try again.',
+                                icon: 'error'
+                            });
+                        }
+                    });
+                }
+            });
+        });
+        
+        // Helper function to get CSRF token from cookies
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+    });
+</script>
+{% endblock %}

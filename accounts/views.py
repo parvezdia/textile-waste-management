@@ -802,20 +802,20 @@ def admin_analytics(request):
         messages.error(request, "Access denied. Admin privileges required.")
         return redirect("accounts:profile")
     
-    # Factory analytics
+    # Factory analytics - Material Type Distribution
     from inventory.models import TextileWaste
     waste_by_material = TextileWaste.objects.values('material').annotate(
         count=Count('id'),
         total_quantity=Sum('quantity')
     ).order_by('-total_quantity')
     
-    # Designer analytics
+    # Designer analytics - Design Status Distribution
     from designs.models import Design
     designs_by_status = Design.objects.values('status').annotate(
         count=Count('id')
     ).order_by('-count')
     
-    # Buyer analytics
+    # Buyer analytics - Order Status Distribution
     from orders.models import Order
     orders_by_status = Order.objects.values('status').annotate(
         count=Count('id')
@@ -845,12 +845,29 @@ def admin_analytics(request):
             'revenue': month_data['revenue'] or 0
         })
     
+    # Get top factories by waste quantity (for the table section)
+    top_factories = FactoryPartner.objects.select_related('factory_details').annotate(
+        total_quantity=Sum('waste_items__quantity'),
+        available_quantity=Sum('waste_items__quantity', filter=models.Q(waste_items__status="AVAILABLE")),
+        recycled_quantity=Sum('waste_items__quantity', filter=models.Q(waste_items__status="RECYCLED"))
+    ).order_by('-total_quantity')[:5]
+    
+    # Calculate percentages
+    for factory in top_factories:
+        if factory.total_quantity:
+            factory.available_percent = (factory.available_quantity or 0) / factory.total_quantity * 100
+            factory.recycled_percent = (factory.recycled_quantity or 0) / factory.total_quantity * 100
+        else:
+            factory.available_percent = 0
+            factory.recycled_percent = 0
+    
     context = {
         'user': user,
         'waste_by_material': waste_by_material,
         'designs_by_status': designs_by_status,
         'orders_by_status': orders_by_status,
         'monthly_orders': monthly_orders,
+        'top_factories': top_factories,
     }
     
     return render(request, "accounts/admin/analytics.html", context)
@@ -1015,13 +1032,12 @@ def generate_sustainability_report(request):
     
     material_sheet.merge_range('A1:D1', 'Waste by Material Type', title_format)
     material_sheet.write_row(1, 0, [
-        'Material Type', 'Quantity (kg)', 'Percentage of Total', 'Average Price'
+        'Material Type', 'Quantity (kg)', 'Percentage of Total'
     ], header_format)
     
     # Get waste by material type
     waste_by_material = TextileWaste.objects.values('material').annotate(
-        total=Sum('quantity'),
-        avg_price=Avg('price_per_kg')
+        total=Sum('quantity')
     ).order_by('-total')
     
     # Add material data
@@ -1029,12 +1045,10 @@ def generate_sustainability_report(request):
         material_type = material['material']
         total = material['total'] or 0
         percentage = total/total_waste if total_waste > 0 else 0
-        avg_price = material['avg_price'] or 0
         
         material_sheet.write(i+2, 0, material_type, data_format)
         material_sheet.write(i+2, 1, total, data_format)
         material_sheet.write(i+2, 2, percentage, percent_format)
-        material_sheet.write(i+2, 3, avg_price, data_format)
     
     # Add monthly trends worksheet
     trends_sheet = workbook.add_worksheet('Monthly Trends')
