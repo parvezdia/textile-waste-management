@@ -11,6 +11,7 @@ import json
 import xlsxwriter
 from io import BytesIO
 import datetime
+import math
 
 from .forms import (
     AdminForm,
@@ -794,13 +795,16 @@ def admin_approve_payment(request, order_id):
 
 @login_required
 def admin_analytics(request):
-    """Admin analytics dashboard"""
+    """Admin analytics dashboard with HTML-based visualizations"""
     user = request.user
     
     # Verify user is admin
     if user.user_type != "ADMIN":
         messages.error(request, "Access denied. Admin privileges required.")
         return redirect("accounts:profile")
+    
+    # Check for debug mode parameter
+    debug_mode = 'debug' in request.GET
     
     # Factory analytics - Material Type Distribution
     from inventory.models import TextileWaste
@@ -809,11 +813,67 @@ def admin_analytics(request):
         total_quantity=Sum('quantity')
     ).order_by('-total_quantity')
     
+    # Calculate percentages and add colors for HTML visualization
+    total_waste_quantity = sum(item['total_quantity'] or 0 for item in waste_by_material)
+    colors = ['#4CAF50', '#2196F3', '#FF9800', '#F44336', '#9C27B0', 
+              '#3F51B5', '#E91E63', '#009688', '#673AB7', '#FFEB3B']
+              
+    # Prepare data for pie chart - pre-calculate rotation and clip paths
+    cumulative_percentage = 0
+    for i, item in enumerate(waste_by_material):
+        item['percentage'] = (item['total_quantity'] / total_waste_quantity * 100) if total_waste_quantity else 0
+        item['color'] = colors[i % len(colors)]
+        # Format quantity for display
+        item['display_quantity'] = f"{item['total_quantity']:.1f}" if item['total_quantity'] else "0"
+        
+        # Calculate rotation angle (in degrees)
+        item['rotation'] = cumulative_percentage * 3.6  # 3.6 = 360/100
+        
+        # Calculate the end point of this slice
+        cumulative_percentage += item['percentage']
+        item['end_percentage'] = cumulative_percentage
+        
+        # Calculate clip path coordinates for pie slice
+        angle_rad = math.radians(cumulative_percentage * 3.6)
+        x = 50 + 50 * math.sin(angle_rad)
+        y = 50 - 50 * math.cos(angle_rad)
+        item['clip_path_x'] = x
+        item['clip_path_y'] = y
+    
     # Designer analytics - Design Status Distribution
     from designs.models import Design
     designs_by_status = Design.objects.values('status').annotate(
         count=Count('id')
     ).order_by('-count')
+    
+    # Calculate percentages for HTML visualization
+    total_designs = sum(item['count'] for item in designs_by_status)
+    status_display = {
+        'DRAFT': 'Draft',
+        'PUBLISHED': 'Published',
+        'PENDING_REVIEW': 'Pending Review'
+    }
+    
+    # Prepare data for pie chart
+    cumulative_percentage = 0
+    for i, item in enumerate(designs_by_status):
+        item['percentage'] = (item['count'] / total_designs * 100) if total_designs else 0
+        item['color'] = colors[i % len(colors)]
+        item['display_status'] = status_display.get(item['status'], item['status'])
+        
+        # Calculate rotation angle (in degrees)
+        item['rotation'] = cumulative_percentage * 3.6  # 3.6 = 360/100
+        
+        # Calculate the end point of this slice
+        cumulative_percentage += item['percentage']
+        item['end_percentage'] = cumulative_percentage
+        
+        # Calculate clip path coordinates for pie slice
+        angle_rad = math.radians(cumulative_percentage * 3.6)
+        x = 50 + 50 * math.sin(angle_rad)
+        y = 50 - 50 * math.cos(angle_rad)
+        item['clip_path_x'] = x
+        item['clip_path_y'] = y
     
     # Buyer analytics - Order Status Distribution
     from orders.models import Order
@@ -821,12 +881,48 @@ def admin_analytics(request):
         count=Count('id')
     ).order_by('-count')
     
+    # Calculate percentages for HTML visualization
+    total_orders = sum(item['count'] for item in orders_by_status)
+    order_status_display = {
+        'PENDING': 'Pending',
+        'CONFIRMED': 'Confirmed',
+        'IN_PRODUCTION': 'In Production',
+        'READY_FOR_DELIVERY': 'Ready for Delivery',
+        'SHIPPED': 'Shipped',
+        'DELIVERED': 'Delivered',
+        'CANCELED': 'Canceled'
+    }
+    
+    # Prepare data for pie chart
+    cumulative_percentage = 0
+    for i, item in enumerate(orders_by_status):
+        item['percentage'] = (item['count'] / total_orders * 100) if total_orders else 0
+        item['color'] = colors[i % len(colors)]
+        item['display_status'] = order_status_display.get(item['status'], item['status'])
+        
+        # Calculate rotation angle (in degrees)
+        item['rotation'] = cumulative_percentage * 3.6  # 3.6 = 360/100
+        
+        # Calculate the end point of this slice
+        cumulative_percentage += item['percentage']
+        item['end_percentage'] = cumulative_percentage
+        
+        # Calculate clip path coordinates for pie slice
+        angle_rad = math.radians(cumulative_percentage * 3.6)
+        x = 50 + 50 * math.sin(angle_rad)
+        y = 50 - 50 * math.cos(angle_rad)
+        item['clip_path_x'] = x
+        item['clip_path_y'] = y
+    
     # Monthly order revenue
     months = 6  # Last 6 months
     end_date = timezone.now()
     start_date = end_date - datetime.timedelta(days=30*months)
     
     monthly_orders = []
+    max_order_count = 0
+    max_revenue = 0
+    
     for i in range(months):
         month_start = start_date + datetime.timedelta(days=30*i)
         month_end = start_date + datetime.timedelta(days=30*(i+1))
@@ -839,13 +935,28 @@ def admin_analytics(request):
             revenue=Sum('total_price')
         )
         
+        count = month_data['count'] or 0
+        revenue = month_data['revenue'] or 0
+        
+        max_order_count = max(max_order_count, count)
+        max_revenue = max(max_revenue, revenue)
+        
         monthly_orders.append({
             'month': month_start.strftime('%b %Y'),
-            'count': month_data['count'] or 0,
-            'revenue': month_data['revenue'] or 0
+            'count': count,
+            'revenue': revenue,
+            'display_revenue': f"${revenue:.2f}" if revenue else "$0.00"
         })
     
+    # Calculate percentages for bar heights in HTML visualization
+    # Pre-calculate the bar width based on number of months
+    bar_width_percent = 100 / len(monthly_orders) if monthly_orders else 0
+    for item in monthly_orders:
+        item['count_percentage'] = (item['count'] / max_order_count * 100) if max_order_count else 0
+        item['revenue_percentage'] = (item['revenue'] / max_revenue * 100) if max_revenue else 0
+    
     # Get top factories by waste quantity (for the table section)
+    from accounts.models import FactoryPartner
     top_factories = FactoryPartner.objects.select_related('factory_details').annotate(
         total_quantity=Sum('waste_items__quantity'),
         available_quantity=Sum('waste_items__quantity', filter=models.Q(waste_items__status="AVAILABLE")),
@@ -857,9 +968,18 @@ def admin_analytics(request):
         if factory.total_quantity:
             factory.available_percent = (factory.available_quantity or 0) / factory.total_quantity * 100
             factory.recycled_percent = (factory.recycled_quantity or 0) / factory.total_quantity * 100
+            factory.total_quantity_display = f"{factory.total_quantity:.1f}"
         else:
             factory.available_percent = 0
             factory.recycled_percent = 0
+            factory.total_quantity_display = "0"
+    
+    # Calculate total counts and revenue for the tables
+    monthly_orders_total_count = sum(item['count'] for item in monthly_orders)
+    monthly_orders_total_revenue = sum(item['revenue'] for item in monthly_orders)
+    
+    # Calculate total order status count
+    orders_status_total_count = sum(item['count'] for item in orders_by_status)
     
     context = {
         'user': user,
@@ -867,7 +987,12 @@ def admin_analytics(request):
         'designs_by_status': designs_by_status,
         'orders_by_status': orders_by_status,
         'monthly_orders': monthly_orders,
+        'bar_width_percent': bar_width_percent,
         'top_factories': top_factories,
+        'debug_mode': debug_mode,
+        'monthly_orders_total_count': monthly_orders_total_count,
+        'monthly_orders_total_revenue': monthly_orders_total_revenue,
+        'orders_status_total_count': orders_status_total_count,
     }
     
     return render(request, "accounts/admin/analytics.html", context)

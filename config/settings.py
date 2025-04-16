@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "transactions",
     "notifications",
     "channels",
+    "common",
 ]
 
 MIDDLEWARE = [
