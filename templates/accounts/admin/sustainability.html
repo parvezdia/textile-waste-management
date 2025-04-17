@@ -2,101 +2,274 @@
 
 {% block title %}Sustainability Metrics | Admin Dashboard{% endblock %}
 
-{% block head_extra %}
-<!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% block extra_css %}
+<style>
+    .metric-card {
+        transition: all 0.3s ease;
+        border-radius: 10px;
+        border: none;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    .metric-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    }
+    .progress {
+        height: 10px;
+        border-radius: 10px;
+        background-color: #f0f0f0;
+    }
+    .highlight-number {
+        font-size: 1.8rem;
+        font-weight: 600;
+        line-height: 1.2;
+        margin-bottom: 0;
+    }
+    .impact-icon {
+        font-size: 2rem;
+        opacity: 0.8;
+    }
+    .card-header {
+        background-color: transparent;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        padding: 1rem;
+    }
+    .card-title {
+        margin-bottom: 0;
+        font-weight: 600;
+    }
+    .dashboard-container {
+        padding: 20px;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'accounts:admin_dashboard' %}">Admin Dashboard</a></li>
-            <li class="breadcrumb-item active" aria-current="page">Sustainability Metrics</li>
-        </ol>
-    </nav>
-
-    <h1 class="mb-4">Sustainability Metrics</h1>
-    
-    <div class="text-end mb-3">
+<div class="container-fluid dashboard-container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="{% url 'accounts:admin_dashboard' %}">Admin Dashboard</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Sustainability Metrics</li>
+                </ol>
+            </nav>
+            <h1 class="h2 mt-2">Sustainability Dashboard</h1>
+        </div>
         <a href="{% url 'accounts:generate_sustainability_report' %}" class="btn btn-success">
-            <i class="fas fa-download"></i> Generate Excel Report
+            <i class="fas fa-file-export me-2"></i>Export Report
         </a>
     </div>
     
     <!-- Key Metrics Cards -->
-    <div class="row mb-4">
+    <div class="row g-3 mb-4">
         <div class="col-md-3">
-            <div class="card bg-success text-white h-100">
-                <div class="card-body text-center">
-                    <h3>{{ total_waste|floatformat:0 }}</h3>
-                    <p class="mb-0">Total Textile Waste (kg)</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card bg-info text-white h-100">
-                <div class="card-body text-center">
-                    <h3>{{ recycled_waste|floatformat:0 }}</h3>
-                    <p class="mb-0">Recycled Waste (kg)</p>
+            <div class="card metric-card bg-success text-white h-100">
+                <div class="card-body d-flex">
+                    <div class="me-3">
+                        <i class="fas fa-recycle impact-icon"></i>
+                    </div>
+                    <div>
+                        <h2 class="highlight-number">{{ recycled_waste|floatformat:0 }}</h2>
+                        <p class="mb-0">Recycled Waste (kg)</p>
+                    </div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-primary text-white h-100">
-                <div class="card-body text-center">
-                    <h3>{{ co2_reduction|floatformat:0 }}</h3>
-                    <p class="mb-0">CO₂ Reduction (kg)</p>
+            <div class="card metric-card bg-primary text-white h-100">
+                <div class="card-body d-flex">
+                    <div class="me-3">
+                        <i class="fas fa-cloud impact-icon"></i>
+                    </div>
+                    <div>
+                        <h2 class="highlight-number">{{ co2_reduction|floatformat:0 }}</h2>
+                        <p class="mb-0">CO₂ Reduction (kg)</p>
+                    </div>
                 </div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="card bg-warning text-white h-100">
-                <div class="card-body text-center">
-                    <h3>{{ water_savings|floatformat:0 }}</h3>
-                    <p class="mb-0">Water Savings (liters)</p>
+            <div class="card metric-card bg-info text-white h-100">
+                <div class="card-body d-flex">
+                    <div class="me-3">
+                        <i class="fas fa-tint impact-icon"></i>
+                    </div>
+                    <div>
+                        <h2 class="highlight-number">{{ water_savings|floatformat:0 }}</h2>
+                        <p class="mb-0">Water Savings (L)</p>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-    
-    <!-- Recycling Rate Chart -->
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <div class="card shadow-sm h-100">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="card-title mb-0">Waste Recycling Progress</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="recyclingChart" height="200"></canvas>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card shadow-sm h-100">
-                <div class="card-header bg-success text-white">
-                    <h5 class="card-title mb-0">Recycling Breakdown</h5>
-                </div>
-                <div class="card-body">
-                    <div class="d-flex justify-content-center align-items-center h-100">
-                        <canvas id="recyclingBreakdownChart"></canvas>
+        <div class="col-md-3">
+            <div class="card metric-card bg-warning text-white h-100">
+                <div class="card-body d-flex">
+                    <div class="me-3">
+                        <i class="fas fa-boxes impact-icon"></i>
+                    </div>
+                    <div>
+                        <h2 class="highlight-number">{{ total_waste|floatformat:0 }}</h2>
+                        <p class="mb-0">Total Waste (kg)</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
     
-    <!-- Factory Utilization Rates -->
-    <div class="row mb-4">
+    <!-- Waste Recycling Progress -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-7">
+            <div class="card metric-card h-100">
+                <div class="card-header">
+                    <h5 class="card-title">
+                        <i class="fas fa-chart-pie text-primary me-2"></i>
+                        Waste Recycling Progress
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Status breakdown -->
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Status</th>
+                                    <th>Quantity (kg)</th>
+                                    <th>Percentage</th>
+                                    <th>Progress</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><span class="badge bg-success">Recycled</span></td>
+                                    <td>{{ recycled_waste|floatformat:1 }}</td>
+                                    <td>{{ recycled_percentage|floatformat:1 }}%</td>
+                                    <td width="30%">
+                                        <div class="progress">
+                                            <div class="progress-bar bg-success" 
+                                                 style="width: {{ recycled_percentage }}%">
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge bg-info">Available</span></td>
+                                    <td>{{ available_waste|floatformat:1 }}</td>
+                                    <td>{{ available_percentage|floatformat:1 }}%</td>
+                                    <td>
+                                        <div class="progress">
+                                            <div class="progress-bar bg-info" 
+                                                 style="width: {{ available_percentage }}%">
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge bg-warning">Used</span></td>
+                                    <td>{{ used_waste|floatformat:1 }}</td>
+                                    <td>{{ used_percentage|floatformat:1 }}%</td>
+                                    <td>
+                                        <div class="progress">
+                                            <div class="progress-bar bg-warning" 
+                                                 style="width: {{ used_percentage }}%">
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge bg-secondary">Pending</span></td>
+                                    <td>{{ pending_waste|floatformat:1 }}</td>
+                                    <td>{{ pending_percentage|floatformat:1 }}%</td>
+                                    <td>
+                                        <div class="progress">
+                                            <div class="progress-bar bg-secondary" 
+                                                 style="width: {{ pending_percentage }}%">
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Overall recycling progress bar -->
+                    <div class="mt-4">
+                        <h6>Overall Recycling Progress</h6>
+                        <div class="progress" style="height: 20px;">
+                            <div class="progress-bar bg-success" 
+                                 style="width: {{ recycled_percentage }}%" 
+                                 role="progressbar">
+                                {{ recycled_percentage|floatformat:1 }}% Recycled
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recycling Breakdown -->
+        <div class="col-lg-5">
+            <div class="card metric-card h-100">
+                <div class="card-header">
+                    <h5 class="card-title">
+                        <i class="fas fa-chart-bar text-success me-2"></i>
+                        Recycling Breakdown
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Materials table -->
+                    <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                        <table class="table table-hover table-sm">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Material</th>
+                                    <th>Quantity (kg)</th>
+                                    <th>Recycled %</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for material in waste_by_material %}
+                                <tr>
+                                    <td>{{ material.material }}</td>
+                                    <td>{{ material.total|floatformat:1 }}</td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="progress flex-grow-1 me-2">
+                                                <div class="progress-bar bg-success" 
+                                                     style="width: {{ material.recycled_percentage }}%">
+                                                </div>
+                                            </div>
+                                            <span>{{ material.recycled_percentage|floatformat:1 }}%</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="3" class="text-center">No material data available</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Factory Waste Utilization -->
+    <div class="row g-3 mb-4">
         <div class="col-12">
-            <div class="card shadow-sm">
-                <div class="card-header bg-info text-white">
-                    <h5 class="card-title mb-0">Factory Waste Utilization Rates</h5>
+            <div class="card metric-card">
+                <div class="card-header">
+                    <h5 class="card-title">
+                        <i class="fas fa-industry text-info me-2"></i>
+                        Factory Waste Utilization Rates
+                    </h5>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-hover" id="factoryTable">
-                            <thead>
+                        <table class="table table-hover table-sm">
+                            <thead class="table-light">
                                 <tr>
                                     <th>Factory Name</th>
                                     <th>Total Waste (kg)</th>
@@ -109,16 +282,16 @@
                                 {% for factory in waste_by_factory %}
                                 <tr>
                                     <td>{{ factory.factory__factory_details__factory_name|default:"Unknown" }}</td>
-                                    <td>{{ factory.total|floatformat:0 }}</td>
-                                    <td>{{ factory.recycled|floatformat:0|default:"0" }}</td>
+                                    <td>{{ factory.total|floatformat:1 }}</td>
+                                    <td>{{ factory.recycled|default:0|floatformat:1 }}</td>
                                     <td>{{ factory.utilization_rate|floatformat:1 }}%</td>
-                                    <td>
+                                    <td width="30%">
                                         <div class="progress">
-                                            <div class="progress-bar bg-success" role="progressbar" 
-                                                 style="width: {{ factory.utilization_rate }}%;" 
-                                                 aria-valuenow="{{ factory.utilization_rate }}" 
-                                                 aria-valuemin="0" aria-valuemax="100">
-                                                {{ factory.utilization_rate|floatformat:1 }}%
+                                            <div class="progress-bar {% if factory.utilization_rate >= 75 %}bg-success
+                                                                  {% elif factory.utilization_rate >= 50 %}bg-info
+                                                                  {% elif factory.utilization_rate >= 25 %}bg-warning
+                                                                  {% else %}bg-danger{% endif %}" 
+                                                 style="width: {{ factory.utilization_rate }}%">
                                             </div>
                                         </div>
                                     </td>
@@ -136,79 +309,174 @@
         </div>
     </div>
     
-    <!-- Environmental Impact -->
-    <div class="row">
-        <div class="col-md-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header bg-success text-white">
-                    <h5 class="card-title mb-0">Environmental Impact</h5>
+    <!-- Environmental Impact and Goals -->
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <div class="card metric-card h-100">
+                <div class="card-header">
+                    <h5 class="card-title">
+                        <i class="fas fa-leaf text-success me-2"></i>
+                        Environmental Impact
+                    </h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <div class="card bg-light">
+                    <div class="row g-3">
+                        <!-- CO2 Reduction -->
+                        <div class="col-md-6">
+                            <div class="card bg-light h-100">
                                 <div class="card-body">
-                                    <h5 class="card-title">CO₂ Reduction</h5>
-                                    <p class="card-text">
-                                        <span class="display-5">{{ co2_reduction|floatformat:0 }}</span> kg
-                                    </p>
-                                    <p class="card-text text-muted">
-                                        Equivalent to 
-                                        <strong>{{ co2_reduction_trees|default:0|floatformat:0 }}</strong> 
-                                        trees planted per year
+                                    <div class="text-center">
+                                        <i class="fas fa-cloud-sun text-primary mb-2" style="font-size: 2rem;"></i>
+                                        <h5>CO₂ Reduction</h5>
+                                    </div>
+                                    <div class="text-center">
+                                        <h3 class="mb-1">{{ co2_reduction|floatformat:0 }}</h3>
+                                        <p class="text-muted mb-2">kg</p>
+                                    </div>
+                                    <hr class="my-2">
+                                    <p class="text-center text-muted mb-0">
+                                        <small>Equivalent to <strong>{{ co2_reduction_trees|floatformat:0 }}</strong> trees planted per year</small>
                                     </p>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <div class="card bg-light">
+                        
+                        <!-- Water Savings -->
+                        <div class="col-md-6">
+                            <div class="card bg-light h-100">
                                 <div class="card-body">
-                                    <h5 class="card-title">Water Savings</h5>
-                                    <p class="card-text">
-                                        <span class="display-5">{{ water_savings|floatformat:0 }}</span> L
-                                    </p>
-                                    <p class="card-text text-muted">
-                                        Equivalent to 
-                                        <strong>{{ water_savings_households|default:0|floatformat:0 }}</strong>
-                                        households' daily water usage
+                                    <div class="text-center">
+                                        <i class="fas fa-tint text-info mb-2" style="font-size: 2rem;"></i>
+                                        <h5>Water Savings</h5>
+                                    </div>
+                                    <div class="text-center">
+                                        <h3 class="mb-1">{{ water_savings|floatformat:0 }}</h3>
+                                        <p class="text-muted mb-2">L</p>
+                                    </div>
+                                    <hr class="my-2">
+                                    <p class="text-center text-muted mb-0">
+                                        <small>Equivalent to <strong>{{ water_savings_households|floatformat:0 }}</strong> households' daily water usage</small>
                                     </p>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Monthly recycling trends -->
+                    <div class="mt-4">
+                        <h6>Monthly Recycling Trends</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Month</th>
+                                        <th>Collected (kg)</th>
+                                        <th>Recycled (kg)</th>
+                                        <th>Efficiency</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for month in monthly_trends %}
+                                    <tr>
+                                        <td>{{ month.month }}</td>
+                                        <td>{{ month.collected|floatformat:1 }}</td>
+                                        <td>{{ month.recycled|floatformat:1 }}</td>
+                                        <td>
+                                            <div class="progress" style="height: 8px;">
+                                                <div class="progress-bar bg-success" 
+                                                     style="width: {{ month.efficiency }}%">
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="4" class="text-center">No monthly data available</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="card shadow-sm h-100">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="card-title mb-0">Sustainability Goals Progress</h5>
+        
+        <div class="col-lg-6">
+            <div class="card metric-card h-100">
+                <div class="card-header">
+                    <h5 class="card-title">
+                        <i class="fas fa-bullseye text-primary me-2"></i>
+                        Sustainability Goals Progress
+                    </h5>
                 </div>
                 <div class="card-body">
-                    <h6>Recycling Target (50% of total waste)</h6>
-                    <div class="progress mb-4" style="height: 25px;">
-                        <div class="progress-bar {% if recycled_percentage >= 50 %}bg-success{% else %}bg-warning{% endif %}" 
-                             role="progressbar" style="width: {{ recycled_percentage|default:0 }}%;" 
-                             aria-valuenow="{{ recycled_waste|default:0 }}" aria-valuemin="0" aria-valuemax="{{ total_waste|default:0 }}">
-                            {{ recycled_percentage|default:0|floatformat:1 }}%
+                    <!-- Recycling Rate Goal -->
+                    <h6 class="mb-3">Recycling Target (50% of total waste)</h6>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Current progress</span>
+                        <span>{{ recycled_percentage|floatformat:1 }}%</span>
+                    </div>
+                    <div class="progress mb-4">
+                        <div class="progress-bar {% if recycled_percentage >= 50 %}bg-success{% else %}bg-warning{% endif %}"
+                             style="width: {{ recycled_percentage }}%">
                         </div>
                     </div>
                     
-                    <h6>CO₂ Reduction Target (1000 kg)</h6>
-                    <div class="progress mb-4" style="height: 25px;">
-                        <div class="progress-bar {% if co2_reduction >= 1000 %}bg-success{% else %}bg-info{% endif %}" 
-                             role="progressbar" style="width: {{ co2_percentage|default:0 }}%;" 
-                             aria-valuenow="{{ co2_reduction|default:0 }}" aria-valuemin="0" aria-valuemax="1000">
-                            {{ co2_reduction|floatformat:0 }} / 1000 kg
+                    <!-- CO2 Goal -->
+                    <h6 class="mb-3">CO₂ Reduction Target (1,000 kg)</h6>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Current progress</span>
+                        <span>{{ co2_reduction|floatformat:0 }}/1,000 kg</span>
+                    </div>
+                    <div class="progress mb-4">
+                        <div class="progress-bar {% if co2_percentage >= 100 %}bg-success{% else %}bg-info{% endif %}" 
+                             style="width: {{ co2_percentage }}%">
                         </div>
                     </div>
                     
-                    <h6>Water Savings Target (100,000 liters)</h6>
+                    <!-- Water Goal -->
+                    <h6 class="mb-3">Water Savings Target (100,000 L)</h6>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span>Current progress</span>
+                        <span>{{ water_savings|floatformat:0 }}/100,000 L</span>
+                    </div>
+                    <div class="progress mb-4">
+                        <div class="progress-bar {% if water_percentage >= 100 %}bg-success{% else %}bg-primary{% endif %}" 
+                             style="width: {{ water_percentage }}%">
+                        </div>
+                    </div>
+                    
+                    <!-- Status Distribution -->
+                    <h6 class="mt-4 mb-3">Waste Status Distribution</h6>
                     <div class="progress" style="height: 25px;">
-                        <div class="progress-bar {% if water_savings >= 100000 %}bg-success{% else %}bg-primary{% endif %}" 
-                             role="progressbar" style="width: {{ water_percentage|default:0 }}%;" 
-                             aria-valuenow="{{ water_savings|default:0 }}" aria-valuemin="0" aria-valuemax="100000">
-                            {{ water_savings|floatformat:0 }} / 100,000 L
+                        {% for item in status_breakdown %}
+                        <div class="progress-bar {% if item.status == 'Recycled' %}bg-success
+                                             {% elif item.status == 'Available' %}bg-info
+                                             {% elif item.status == 'Used' %}bg-warning
+                                             {% else %}bg-secondary{% endif %}" 
+                             style="width: {{ item.percentage }}%"
+                             title="{{ item.status }}: {{ item.quantity|floatformat:1 }}kg ({{ item.percentage|floatformat:1 }}%)">
+                            {% if item.percentage > 10 %}{{ item.status }} {{ item.percentage|floatformat:0 }}%{% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="mt-3">
+                        <div class="row">
+                            {% for item in status_breakdown %}
+                            <div class="col-6 mb-2">
+                                <div class="d-flex align-items-center">
+                                    <span class="badge {% if item.status == 'Recycled' %}bg-success
+                                                    {% elif item.status == 'Available' %}bg-info
+                                                    {% elif item.status == 'Used' %}bg-warning
+                                                    {% else %}bg-secondary{% endif %} me-2">
+                                        &nbsp;
+                                    </span>
+                                    <span>{{ item.status }}: {{ item.percentage|floatformat:1 }}%</span>
+                                </div>
+                            </div>
+                            {% endfor %}
                         </div>
                     </div>
                 </div>
@@ -221,81 +489,17 @@
 {% block scripts %}
 <script>
     $(document).ready(function() {
-        // Initialize DataTable for factory table
+        // Initialize DataTable for factory table with better configuration
         $('#factoryTable').DataTable({
             order: [[3, 'desc']], // Sort by utilization rate descending
-            pageLength: 5
-        });
-        
-        // Recycling progress chart
-        const recyclingCtx = document.getElementById('recyclingChart').getContext('2d');
-        const recyclingChart = new Chart(recyclingCtx, {
-            type: 'bar',
-            data: {
-                labels: ['Total Waste', 'Recycled Waste'],
-                datasets: [{
-                    label: 'Amount (kg)',
-                    data: [{{ total_waste|default:0 }}, {{ recycled_waste|default:0 }}],
-                    backgroundColor: [
-                        'rgba(255, 193, 7, 0.5)', // Yellow for total waste
-                        'rgba(76, 175, 80, 0.5)'  // Green for recycled waste
-                    ],
-                    borderColor: [
-                        'rgba(255, 193, 7, 1)',
-                        'rgba(76, 175, 80, 1)'
-                    ],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Kilograms (kg)'
-                        }
-                    }
-                },
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'Waste Collection vs. Recycling'
-                    }
-                }
-            }
-        });
-        
-        // Recycling breakdown chart
-        const recyclingBreakdownCtx = document.getElementById('recyclingBreakdownChart').getContext('2d');
-        const recyclingBreakdownChart = new Chart(recyclingBreakdownCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Recycled', 'Not Recycled'],
-                datasets: [{
-                    data: [
-                        {{ recycled_waste|default:0 }}, 
-                        {% if total_waste > recycled_waste %}{{ total_waste|default:0|add:"-"|add:recycled_waste|default:0 }}{% else %}0{% endif %}
-                    ],
-                    backgroundColor: [
-                        'rgba(76, 175, 80, 0.7)', // Green for recycled
-                        'rgba(244, 67, 54, 0.7)'  // Red for not recycled
-                    ],
-                    borderColor: [
-                        'rgba(76, 175, 80, 1)',
-                        'rgba(244, 67, 54, 1)'
-                    ],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    title: {
-                        display: true,
-                        text: 'Recycling Rate'
-                    }
-                }
+            pageLength: 10,
+            lengthMenu: [[5, 10, 25, -1], [5, 10, 25, "All"]],
+            responsive: true,
+            language: {
+                search: "_INPUT_",
+                searchPlaceholder: "Search factories...",
+                info: "Showing _START_ to _END_ of _TOTAL_ factories",
+                lengthMenu: "Show _MENU_ factories per page"
             }
         });
     });

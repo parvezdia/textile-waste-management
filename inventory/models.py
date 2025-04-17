@@ -20,6 +20,7 @@ class TextileWaste(models.Model):
         ("AVAILABLE", "Available"),
         ("RESERVED", "Reserved"),
         ("USED", "Used"),
+        ("RECYCLED", "Recycled"),
         ("EXPIRED", "Expired"),
         ("PENDING_REVIEW", "Pending Review"),
     ]

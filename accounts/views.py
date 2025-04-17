@@ -1008,49 +1008,171 @@ def admin_sustainability(request):
         return redirect("accounts:profile")
     
     from inventory.models import TextileWaste
+    from django.db.models import Sum, Case, When, Value, FloatField, F, Count
     
-    # Calculate textile waste recycled
+    # Calculate total and recycled waste
     total_waste = TextileWaste.objects.aggregate(total=Sum('quantity'))['total'] or 0
-    recycled_waste = TextileWaste.objects.filter(status="RECYCLED").aggregate(
+    
+    # Count both RECYCLED and USED status as recycled waste for sustainability metrics
+    recycled_waste = TextileWaste.objects.filter(status__in=["RECYCLED", "USED"]).aggregate(
         total=Sum('quantity')
     )['total'] or 0
     
-    # Calculate CO2 reduction (estimated 6kg CO2 saved per kg textile recycled)
-    co2_reduction = recycled_waste * 6  # in kg
+    available_waste = TextileWaste.objects.filter(status="AVAILABLE").aggregate(
+        total=Sum('quantity')
+    )['total'] or 0
     
-    # Calculate water savings (estimated 10,000L water saved per kg textile recycled)
-    water_savings = recycled_waste * 10000  # in liters
+    used_waste = TextileWaste.objects.filter(status="USED").aggregate(
+        total=Sum('quantity')
+    )['total'] or 0
     
-    # Calculate percentages for progress bars
+    pending_waste = TextileWaste.objects.filter(status="PENDING_REVIEW").aggregate(
+        total=Sum('quantity')
+    )['total'] or 0
+
+    # Print debug information
+    print(f"DEBUG - Total Waste: {total_waste}")
+    print(f"DEBUG - Recycled Waste: {recycled_waste}")
+    print(f"DEBUG - Available Waste: {available_waste}")
+    print(f"DEBUG - Used Waste: {used_waste}")
+    print(f"DEBUG - Pending Waste: {pending_waste}")
+    
+    # Calculate percentages
     recycled_percentage = (recycled_waste / total_waste * 100) if total_waste > 0 else 0
-    co2_percentage = min((co2_reduction / 1000 * 100), 100)  # Cap at 100%
-    water_percentage = min((water_savings / 100000 * 100), 100)  # Cap at 100%
+    available_percentage = (available_waste / total_waste * 100) if total_waste > 0 else 0
+    used_percentage = (used_waste / total_waste * 100) if total_waste > 0 else 0
+    pending_percentage = (pending_waste / total_waste * 100) if total_waste > 0 else 0
     
-    # Calculate environmental impact equivalents
-    co2_reduction_trees = co2_reduction / 21  # Each tree absorbs ~21kg CO2 per year
-    water_savings_households = water_savings / 350  # Average household uses ~350L per day
+    not_recycled_waste = total_waste - recycled_waste
+    not_recycled_percentage = 100 - recycled_percentage
+
+    print(f"DEBUG - Recycled %: {recycled_percentage}")
+    print(f"DEBUG - Available %: {available_percentage}")
+    print(f"DEBUG - Used %: {used_percentage}")
+    print(f"DEBUG - Pending %: {pending_percentage}")
+
+    # Environmental impact calculations
+    # Standard impact values per kg of textile waste recycled
+    CO2_REDUCTION_PER_KG = 3.6  # kg of CO2 saved per kg of textile waste recycled
+    WATER_SAVINGS_PER_KG = 2700  # liters of water saved per kg of textile waste recycled
     
-    # Get waste utilization rate by factory
+    # Calculate environmental impact
+    co2_reduction = recycled_waste * CO2_REDUCTION_PER_KG
+    water_savings = recycled_waste * WATER_SAVINGS_PER_KG
+    
+    # Environmental impact equivalents
+    co2_reduction_trees = co2_reduction / 21 if co2_reduction > 0 else 0  # Each tree absorbs ~21kg CO2 per year
+    water_savings_households = water_savings / 350 if water_savings > 0 else 0  # Average household uses 350L per day
+    
+    print(f"DEBUG - CO2 Reduction: {co2_reduction}")
+    print(f"DEBUG - Water Savings: {water_savings}")
+    print(f"DEBUG - Trees Equivalent: {co2_reduction_trees}")
+    print(f"DEBUG - Households Water: {water_savings_households}")
+    
+    # Progress percentages for goals
+    co2_percentage = min((co2_reduction / 1000 * 100), 100) if co2_reduction > 0 else 0  # Target: 1000kg
+    water_percentage = min((water_savings / 100000 * 100), 100) if water_savings > 0 else 0  # Target: 100,000L
+    
+    print(f"DEBUG - CO2 Goal %: {co2_percentage}")
+    print(f"DEBUG - Water Goal %: {water_percentage}")
+    
+    # Get waste by material type for breakdown
+    waste_by_material = TextileWaste.objects.values('material').annotate(
+        total=Sum('quantity'),
+        recycled=Sum('quantity', filter=models.Q(status__in=["RECYCLED", "USED"])),
+        recycled_percentage=Case(
+            When(total__gt=0, then=100.0 * F('recycled') / F('total')),
+            default=Value(0.0),
+            output_field=FloatField()
+        )
+    ).order_by('-total')
+
+    # Get waste utilization by factory
     waste_by_factory = TextileWaste.objects.values(
         'factory__factory_details__factory_name'
     ).annotate(
         total=Sum('quantity'),
-        recycled=Sum('quantity', filter=models.Q(status="RECYCLED")),
-        utilization_rate=models.F('recycled') * 100.0 / models.F('total')
+        recycled=Sum('quantity', filter=models.Q(status__in=["RECYCLED", "USED"])),
+        available=Sum('quantity', filter=models.Q(status="AVAILABLE")),
+        utilized=Case(
+            When(
+                total__gt=0,
+                then=Sum('quantity', filter=models.Q(status__in=["RECYCLED", "USED"]))
+            ),
+            default=Value(0.0),
+            output_field=FloatField()
+        ),
+        utilization_rate=Case(
+            When(
+                total__gt=0,
+                then=100.0 * Sum('quantity', filter=models.Q(status__in=["RECYCLED", "USED"])) / F('total')
+            ),
+            default=Value(0.0),
+            output_field=FloatField()
+        )
     ).order_by('-total')
     
+    # Status breakdown for pie chart
+    status_breakdown = [
+        {'status': 'Recycled', 'quantity': recycled_waste, 'percentage': recycled_percentage},
+        {'status': 'Available', 'quantity': available_waste, 'percentage': available_percentage},
+        {'status': 'Used', 'quantity': used_waste, 'percentage': used_percentage},
+        {'status': 'Pending', 'quantity': pending_waste, 'percentage': pending_percentage}
+    ]
+    
+    # Monthly trends for the last 6 months
+    months = 6
+    end_date = timezone.now()
+    start_date = end_date - datetime.timedelta(days=30*months)
+    
+    monthly_data = []
+    for i in range(months):
+        month_start = start_date + datetime.timedelta(days=30*i)
+        month_end = start_date + datetime.timedelta(days=30*(i+1))
+        
+        month_data = TextileWaste.objects.filter(
+            date_added__gte=month_start,
+            date_added__lt=month_end
+        ).aggregate(
+            collected=Sum('quantity'),
+            recycled=Sum('quantity', filter=models.Q(status__in=["RECYCLED", "USED"]))
+        )
+        
+        # Fix: Properly handle None values
+        collected = month_data['collected'] or 0
+        recycled = month_data['recycled'] or 0
+        efficiency = (recycled / collected * 100) if collected > 0 else 0
+        
+        monthly_data.append({
+            'month': month_start.strftime('%b %Y'),
+            'collected': collected,
+            'recycled': recycled,
+            'efficiency': efficiency
+        })
+
     context = {
         'user': user,
         'total_waste': total_waste,
         'recycled_waste': recycled_waste,
+        'available_waste': available_waste,
+        'used_waste': used_waste,
+        'pending_waste': pending_waste,
+        'not_recycled_waste': not_recycled_waste,
         'co2_reduction': co2_reduction,
         'water_savings': water_savings,
-        'waste_by_factory': waste_by_factory,
         'recycled_percentage': recycled_percentage,
+        'available_percentage': available_percentage,
+        'used_percentage': used_percentage,
+        'pending_percentage': pending_percentage,
+        'not_recycled_percentage': not_recycled_percentage,
         'co2_percentage': co2_percentage,
         'water_percentage': water_percentage,
         'co2_reduction_trees': co2_reduction_trees,
         'water_savings_households': water_savings_households,
+        'waste_by_factory': waste_by_factory,
+        'waste_by_material': waste_by_material,
+        'status_breakdown': status_breakdown,
+        'monthly_trends': monthly_data
     }
     
     return render(request, "accounts/admin/sustainability.html", context)
