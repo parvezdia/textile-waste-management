@@ -8,8 +8,8 @@ from .models import Notification
 
 @login_required
 def notification_list(request):
-    notifications = Notification.objects.filter(recipient=request.user).order_by(
-        "-date_created"
+    notifications = Notification.objects.filter(user=request.user).order_by(
+        "-created_at"
     )
     unread_count = notifications.filter(is_read=False).count()
     return render(
@@ -22,7 +22,7 @@ def notification_list(request):
 @login_required
 def mark_as_read(request, notification_id):
     notification = get_object_or_404(
-        Notification, notification_id=notification_id, recipient=request.user
+        Notification, id=notification_id, user=request.user
     )
     notification.mark_as_read()
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
@@ -32,7 +32,7 @@ def mark_as_read(request, notification_id):
 
 @login_required
 def mark_all_as_read(request):
-    Notification.objects.filter(recipient=request.user, is_read=False).update(
+    Notification.objects.filter(user=request.user, is_read=False).update(
         is_read=True
     )
     if request.headers.get("X-Requested-With") == "XMLHttpRequest":
@@ -42,7 +42,7 @@ def mark_all_as_read(request):
 
 @login_required
 def notification_count(request):
-    count = Notification.objects.filter(recipient=request.user, is_read=False).count()
+    count = Notification.objects.filter(user=request.user, is_read=False).count()
     return JsonResponse({"count": count})
 
 
@@ -50,7 +50,7 @@ def notification_count(request):
 @require_POST
 def mark_notification_read(request, notification_id):
     try:
-        notification = Notification.objects.get(notification_id=notification_id, recipient=request.user)
+        notification = Notification.objects.get(id=notification_id, user=request.user)
         notification.is_read = True
         notification.save()
         return JsonResponse({'status': 'success'})
@@ -61,5 +61,5 @@ def mark_notification_read(request, notification_id):
 @login_required
 @require_POST
 def mark_all_read(request):
-    Notification.objects.filter(recipient=request.user).update(is_read=True)
+    Notification.objects.filter(user=request.user).update(is_read=True)
     return JsonResponse({'status': 'success'})

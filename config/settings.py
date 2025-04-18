@@ -200,6 +200,11 @@ LOGGING = {
             "filename": "logs/capacity.log",
             "formatter": "verbose",
         },
+        "websocket_file": {
+            "class": "logging.FileHandler",
+            "filename": "logs/websocket.log",
+            "formatter": "verbose",
+        },
     },
     "loggers": {
         "common.utils": {
@@ -211,6 +216,16 @@ LOGGING = {
             "handlers": ["console", "file"],
             "level": "INFO",
             "propagate": True,
+        },
+        "django.channels": {
+            "handlers": ["console", "websocket_file"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
+        "notifications": {
+            "handlers": ["console", "websocket_file"],
+            "level": "DEBUG",
+            "propagate": False,
         },
     },
 }
@@ -230,4 +245,11 @@ except OSError as e:
 
 # Channels Configuration
 ASGI_APPLICATION = "config.asgi.application"
-CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
+    },
+}

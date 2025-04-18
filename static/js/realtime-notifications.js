@@ -26,7 +26,7 @@ class NotificationHandler {
 
     setupEventListeners() {
         // Update unread count on page load
-        fetch('/notifications/unread-count/')
+        fetch('/notifications/count/')
             .then(response => response.json())
             .then(data => this.updateBadge(data.count));
     }
@@ -56,29 +56,59 @@ document.addEventListener('DOMContentLoaded', () => {
     new NotificationHandler();
 });
 
+// Fetch unread notifications count
+function updateNotificationCount() {
+    fetch('/notifications/count/')
+        .then(response => response.json())
+        .then(data => {
+            const count = data.count;
+            // Update any notification badges/counters here
+            const notificationBadge = document.querySelector('.notification-badge');
+            if (notificationBadge) {
+                notificationBadge.textContent = count;
+                notificationBadge.style.display = count > 0 ? 'inline' : 'none';
+            }
+        });
+}
+
 // SweetAlert2 notification presets
 const notificationPresets = {
-    'ORDER_UPDATE': {
+    'info': {
         icon: 'info',
         color: '#3085d6'
     },
-    'PAYMENT_UPDATE': {
+    'success': {
         icon: 'success',
         color: '#28a745'
     },
-    'NEW_WASTE_AVAILABLE': {
-        icon: 'info',
-        color: '#17a2b8'
-    },
-    'DESIGN_UPDATE': {
-        icon: 'info',
-        color: '#6610f2'
-    },
-    'SYSTEM_NOTIFICATION': {
+    'warning': {
         icon: 'warning',
         color: '#ffc107'
+    },
+    'error': {
+        icon: 'error',
+        color: '#dc3545'
     }
 };
+
+// Function to display a notification with SweetAlert2
+function showNotification(type, message) {
+    if (typeof Swal !== 'undefined') {
+        const preset = notificationPresets[type] || notificationPresets.info;
+        Swal.fire({
+            title: type.charAt(0).toUpperCase() + type.slice(1),
+            text: message,
+            icon: preset.icon,
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            timerProgressBar: true
+        });
+    } else {
+        console.log(`${type}: ${message}`);
+    }
+}
 
 // Function to mark a notification as read
 function markAsRead(notificationId) {

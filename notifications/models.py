@@ -1,6 +1,20 @@
 from django.db import models
 from django.conf import settings
 
+class LegacyNotification(models.Model):
+    # This class represents the notifications_legacynotification table in your database
+    class Meta:
+        db_table = 'notifications_legacynotification'
+        managed = False  # Tells Django not to manage this model with migrations
+
+
+class UserNotification(models.Model):
+    # This class represents the notifications_usernotification table in your database
+    class Meta:
+        db_table = 'notifications_usernotification'
+        managed = False  # Tells Django not to manage this model with migrations
+
+
 class Notification(models.Model):
     NOTIFICATION_TYPES = (
         ('info', 'Information'),

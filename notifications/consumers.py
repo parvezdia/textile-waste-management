@@ -37,6 +37,11 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         message = event['message']
         await self.send(text_data=json.dumps(message))
 
+    # This method is needed to match the event type from channel_layer.group_send
+    async def notification_message(self, event):
+        message = event['message']
+        await self.send(text_data=json.dumps(message))
+
     @database_sync_to_async
     def mark_notification_read(self, notification_id):
         try:
@@ -44,6 +49,7 @@ class NotificationConsumer(AsyncWebsocketConsumer):
                 id=notification_id,
                 user=self.user
             )
-            notification.mark_as_read()
+            notification.is_read = True
+            notification.save()
         except Notification.DoesNotExist:
             pass

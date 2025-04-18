@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}Notifications - {{ block.super }}{% endblock %}
 
@@ -45,7 +46,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ STATIC_URL }}js/realtime-notifications.js"></script>
+<script src="{% static 'js/realtime-notifications.js' %}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize notifications system

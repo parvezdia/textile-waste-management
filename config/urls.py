@@ -20,6 +20,7 @@ from django.urls import include, path
 from django.views.generic import TemplateView
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 
 urlpatterns = [
     path(
@@ -32,4 +33,11 @@ urlpatterns = [
     path("orders/", include("orders.urls")),
     path("transactions/", include("transactions.urls")),
     path("notifications/", include("notifications.urls")),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) if settings.DEBUG else []
+]
+
+# Serve static files in all environments with Daphne
+urlpatterns += staticfiles_urlpatterns()
+
+# Serve media files in development
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
