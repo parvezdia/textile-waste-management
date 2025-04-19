@@ -5,13 +5,13 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction, models
 from django.shortcuts import redirect, render, get_object_or_404
 from django.http import JsonResponse, HttpResponse
-from django.db.models import Count, Sum, Avg
+from django.db.models import Count, Sum
 from django.utils import timezone
-import json
 import xlsxwriter
 from io import BytesIO
 import datetime
 import math
+import logging
 
 from .forms import (
     AdminForm,
@@ -22,7 +22,7 @@ from .forms import (
     LoginForm,
     UserRegistrationForm,
 )
-from .models import Admin, AdminLevel, Buyer, ContactInfo, Designer, FactoryDetails, FactoryPartner, User
+from .models import Admin, AdminLevel, ContactInfo, Designer, FactoryDetails, FactoryPartner, User
 
 
 def register(request):
@@ -555,19 +555,18 @@ def admin_approve_waste(request, waste_id):
     
     from inventory.models import TextileWaste
     
-    waste_item = get_object_or_404(TextileWaste, id=waste_id)
+    waste_item = get_object_or_404(TextileWaste, waste_id=waste_id)
     
     # Update status to approved
     waste_item.status = "AVAILABLE"
     waste_item.save()
     
     # Add notification for factory
-    from notifications.utils import create_notification
-    create_notification(
+    from notifications.utils import send_notification
+    send_notification(
         waste_item.factory.user,
         f"Your waste item '{waste_item.material}' has been approved by admin.",
-        "waste_approved",
-        object_id=waste_item.id
+        "waste_approved"
     )
     
     return JsonResponse({
@@ -588,19 +587,18 @@ def admin_reject_waste(request, waste_id):
     
     from inventory.models import TextileWaste
     
-    waste_item = get_object_or_404(TextileWaste, id=waste_id)
+    waste_item = get_object_or_404(TextileWaste, waste_id=waste_id)
     
     # Update status to rejected
     waste_item.status = "REJECTED"
     waste_item.save()
     
     # Add notification for factory
-    from notifications.utils import create_notification
-    create_notification(
+    from notifications.utils import send_notification
+    send_notification(
         waste_item.factory.user,
         f"Your waste item '{waste_item.material}' was rejected. Reason: {reason}",
-        "waste_rejected",
-        object_id=waste_item.id
+        "waste_rejected"
     )
     
     return JsonResponse({
@@ -754,12 +752,11 @@ def admin_update_order_status(request, order_id):
     order.save()
     
     # Add notification for buyer
-    from notifications.utils import create_notification
-    create_notification(
+    from notifications.utils import send_notification
+    send_notification(
         order.buyer.user,
         f"Your order #{order.id} status has been updated to {status}.",
-        "order_status_update",
-        object_id=order.id
+        "order_status_update"
     )
     
     return JsonResponse({
@@ -792,12 +789,11 @@ def admin_approve_payment(request, order_id):
         order.save()
         
         # Create notification
-        from notifications.utils import create_notification
-        create_notification(
+        from notifications.utils import send_notification
+        send_notification(
             order.buyer.user,
             f"Your payment for order #{order.id} has been verified. Your order is being processed.",
-            "payment_approved",
-            object_id=order.id
+            "payment_approved"
         )
         
         return JsonResponse({

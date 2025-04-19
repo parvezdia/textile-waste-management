@@ -21,11 +21,15 @@ class Notification(models.Model):
         ('success', 'Success'),
         ('warning', 'Warning'),
         ('error', 'Error'),
+        ('waste_approved', 'Waste Approved'),
+        ('waste_rejected', 'Waste Rejected'),
+        ('order_status_update', 'Order Status Update'),
+        ('payment_approved', 'Payment Approved'),
     )
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     message = models.TextField()
-    notification_type = models.CharField(max_length=10, choices=NOTIFICATION_TYPES, default='info')
+    notification_type = models.CharField(max_length=30, choices=NOTIFICATION_TYPES, default='info')
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
