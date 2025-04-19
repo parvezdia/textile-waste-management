@@ -253,3 +253,11 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
+# Use in-memory channel layer in development to avoid Redis dependency
+if DEBUG:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer",
+        }
+    }

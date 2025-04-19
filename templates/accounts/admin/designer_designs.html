@@ -35,17 +35,6 @@
                     <p><strong>Approval Date:</strong> {{ designer.approval_date|date:"F d, Y" }}</p>
                     {% endif %}
                 </div>
-                <div class="card-footer">
-                    {% if not designer.is_approved %}
-                    <button 
-                        class="btn btn-success approve-btn w-100" 
-                        data-id="{{ designer.id }}"
-                        data-name="{{ designer.user.get_full_name|default:designer.user.username }}"
-                    >
-                        <i class="fas fa-check-circle"></i> Approve Designer
-                    </button>
-                    {% endif %}
-                </div>
             </div>
         </div>
         <div class="col-md-8">
@@ -143,7 +132,7 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
+{% block extra_js %}
 <script>
     $(document).ready(function() {
         // Initialize DataTable if there are designs
@@ -155,74 +144,6 @@
             ]
         });
         {% endif %}
-        
-        // Handle approve button click
-        $('.approve-btn').click(function() {
-            const designerId = $(this).data('id');
-            const designerName = $(this).data('name');
-            
-            // Show confirmation using SweetAlert2
-            Swal.fire({
-                title: 'Approve Designer?',
-                text: `Are you sure you want to approve "${designerName}"?`,
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#28a745',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, approve!'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // Send AJAX request to approve designer
-                    $.ajax({
-                        url: '{% url "accounts:admin_approve_designer" designer_id=999 %}'.replace('999', designerId),
-                        type: 'POST',
-                        headers: {
-                            'X-CSRFToken': getCookie('csrftoken')
-                        },
-                        success: function(response) {
-                            if (response.status === 'success') {
-                                Swal.fire({
-                                    title: 'Approved!',
-                                    text: response.message,
-                                    icon: 'success'
-                                }).then(() => {
-                                    location.reload();
-                                });
-                            } else {
-                                Swal.fire({
-                                    title: 'Error!',
-                                    text: response.message,
-                                    icon: 'error'
-                                });
-                            }
-                        },
-                        error: function() {
-                            Swal.fire({
-                                title: 'Error!',
-                                text: 'Something went wrong. Please try again.',
-                                icon: 'error'
-                            });
-                        }
-                    });
-                }
-            });
-        });
-        
-        // Helper function to get CSRF token from cookies
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
     });
 </script>
 {% endblock %}

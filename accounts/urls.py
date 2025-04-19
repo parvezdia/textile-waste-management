@@ -15,8 +15,8 @@ urlpatterns = [
     # Admin dashboard and related URLs
     path("admin/dashboard/", views.admin_dashboard, name="admin_dashboard"),
     path("admin/factory-waste/", views.admin_factory_waste, name="admin_factory_waste"),
-    path("admin/approve-waste/<int:waste_id>/", views.admin_approve_waste, name="admin_approve_waste"),
-    path("admin/reject-waste/<int:waste_id>/", views.admin_reject_waste, name="admin_reject_waste"),
+    path("admin/approve-waste/<str:waste_id>/", views.admin_approve_waste, name="admin_approve_waste"),
+    path("admin/reject-waste/<str:waste_id>/", views.admin_reject_waste, name="admin_reject_waste"),
     path("admin/designers/", views.admin_designers, name="admin_designers"),
     path("admin/approve-designer/<int:designer_id>/", views.admin_approve_designer, name="admin_approve_designer"),
     path("admin/designer/<int:designer_id>/designs/", views.admin_designer_designs, name="admin_designer_designs"),

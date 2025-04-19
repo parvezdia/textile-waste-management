@@ -915,3 +915,63 @@ def get_recent_activities(request):
         else:
             # User doesn't have permission
             return JsonResponse({"activities": [], "error": "Permission denied"}, status=403)
+
+
+@login_required
+def approve_waste(request, waste_id):
+    """Approve a pending waste item"""
+    # Only admin users can approve waste
+    if not request.user.user_type == "ADMIN":
+        messages.error(request, "Access denied. Only administrators can approve waste items.")
+        return redirect("inventory:waste_list")
+    
+    waste = get_object_or_404(TextileWaste, waste_id=waste_id)
+    
+    if waste.status != "PENDING_REVIEW":
+        messages.warning(request, f"Waste item {waste_id} is not pending review.")
+        return redirect("accounts:admin_factory_waste")
+    
+    # Update waste status to AVAILABLE
+    waste.status = "AVAILABLE"
+    waste.save()
+    
+    # Add to history
+    WasteHistory.objects.create(
+        waste_item=waste,
+        status="AVAILABLE",
+        changed_by=request.user,
+        notes="Approved by administrator"
+    )
+    
+    messages.success(request, f"Waste item {waste_id} has been approved and marked as available.")
+    return redirect("accounts:admin_factory_waste")
+
+
+@login_required
+def reject_waste(request, waste_id):
+    """Reject a pending waste item"""
+    # Only admin users can reject waste
+    if not request.user.user_type == "ADMIN":
+        messages.error(request, "Access denied. Only administrators can reject waste items.")
+        return redirect("inventory:waste_list")
+    
+    waste = get_object_or_404(TextileWaste, waste_id=waste_id)
+    
+    if waste.status != "PENDING_REVIEW":
+        messages.warning(request, f"Waste item {waste_id} is not pending review.")
+        return redirect("accounts:admin_factory_waste")
+    
+    # Update waste status to REJECTED (using EXPIRED as rejection status)
+    waste.status = "EXPIRED"
+    waste.save()
+    
+    # Add to history
+    WasteHistory.objects.create(
+        waste_item=waste,
+        status="EXPIRED",
+        changed_by=request.user,
+        notes="Rejected by administrator"
+    )
+    
+    messages.success(request, f"Waste item {waste_id} has been rejected.")
+    return redirect("accounts:admin_factory_waste")

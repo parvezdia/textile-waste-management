@@ -3,6 +3,7 @@
 {% block title %}Manage Factory Waste | Admin Dashboard{% endblock %}
 
 {% block content %}
+{% csrf_token %}
 <div class="container-fluid py-4">
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
@@ -34,7 +35,7 @@
                     <tbody>
                         {% for waste in waste_items %}
                         <tr class="{% if waste.status == 'PENDING_REVIEW' %}table-warning{% elif waste.status == 'AVAILABLE' %}table-success{% elif waste.status == 'REJECTED' %}table-danger{% endif %}">
-                            <td>{{ waste.id }}</td>
+                            <td>{{ waste.waste_id }}</td>
                             <td>{{ waste.factory.factory_details.factory_name }}</td>
                             <td>{{ waste.material }}</td>
                             <td>{{ waste.quantity }}</td>
@@ -48,14 +49,14 @@
                                 {% if waste.status == 'PENDING_REVIEW' %}
                                 <button 
                                     class="btn btn-sm btn-success approve-btn" 
-                                    data-id="{{ waste.id }}"
+                                    data-id="{{ waste.waste_id }}"
                                     data-material="{{ waste.material }}"
                                 >
                                     <i class="fas fa-check"></i> Approve
                                 </button>
                                 <button 
                                     class="btn btn-sm btn-danger reject-btn" 
-                                    data-id="{{ waste.id }}"
+                                    data-id="{{ waste.waste_id }}"
                                     data-material="{{ waste.material }}"
                                 >
                                     <i class="fas fa-times"></i> Reject
@@ -106,7 +107,7 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
+{% block extra_js %}
 <script>
     $(document).ready(function() {
         // Initialize DataTable
@@ -138,7 +139,8 @@
                         url: '{% url "accounts:admin_approve_waste" waste_id=999 %}'.replace('999', wasteId),
                         type: 'POST',
                         headers: {
-                            'X-CSRFToken': getCookie('csrftoken')
+                            'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val(),
+                            'X-Requested-With': 'XMLHttpRequest'
                         },
                         success: function(response) {
                             if (response.status === 'success') {
@@ -152,15 +154,15 @@
                             } else {
                                 Swal.fire({
                                     title: 'Error!',
-                                    text: response.message,
+                                    text: response.message || 'Something went wrong',
                                     icon: 'error'
                                 });
                             }
                         },
-                        error: function() {
+                        error: function(xhr) {
                             Swal.fire({
                                 title: 'Error!',
-                                text: 'Something went wrong. Please try again.',
+                                text: xhr.responseJSON?.message || 'Something went wrong. Please try again.',
                                 icon: 'error'
                             });
                         }
@@ -197,7 +199,8 @@
                 url: '{% url "accounts:admin_reject_waste" waste_id=999 %}'.replace('999', wasteId),
                 type: 'POST',
                 headers: {
-                    'X-CSRFToken': getCookie('csrftoken')
+                    'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val(),
+                    'X-Requested-With': 'XMLHttpRequest'
                 },
                 data: {
                     reason: reason
@@ -216,16 +219,16 @@
                     } else {
                         Swal.fire({
                             title: 'Error!',
-                            text: response.message,
+                            text: response.message || 'Something went wrong',
                             icon: 'error'
                         });
                     }
                 },
-                error: function() {
+                error: function(xhr) {
                     $('#rejectModal').modal('hide');
                     Swal.fire({
                         title: 'Error!',
-                        text: 'Something went wrong. Please try again.',
+                        text: xhr.responseJSON?.message || 'Something went wrong. Please try again.',
                         icon: 'error'
                     });
                 }

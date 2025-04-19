@@ -23,7 +23,8 @@ python manage.py generate_dummy_data --factories 3 --designers 5 --buyers 8 --wa
 
 python manage.py generate_analytics_data
 
-docker run --name redis-server -p 6379:6379 -d redis
+1. docker run --name redis-server -p 6379:6379 -d redis
 
+2. docker start redis-server
 
-daphne config.asgi:application
+3. daphne config.asgi:application

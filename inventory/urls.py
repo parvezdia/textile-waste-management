@@ -14,6 +14,9 @@ urlpatterns = [
     path("waste/<str:waste_id>/edit/", views.waste_edit, name="waste_edit"),
     path("waste/<str:waste_id>/delete/", views.waste_delete, name="waste_delete"),
     path("waste/<str:waste_id>/review/", views.review_waste, name="review_waste"),
+    # New routes for approving and rejecting waste items
+    path("waste/<str:waste_id>/approve/", views.approve_waste, name="approve_waste"),
+    path("waste/<str:waste_id>/reject/", views.reject_waste, name="reject_waste"),
     # Reports and Analytics
     path("analytics/", views.inventory_analytics, name="analytics"),
     path("reports/", views.inventory_reports, name="reports"),

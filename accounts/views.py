@@ -640,31 +640,48 @@ def admin_designers(request):
 @login_required
 def admin_approve_designer(request, designer_id):
     """Approve a designer account"""
-    user = request.user
-    
+    if request.method != 'POST':
+        return JsonResponse({
+            "status": "error",
+            "message": "Only POST requests are allowed"
+        }, status=405)
+
     # Verify user is admin
-    if user.user_type != "ADMIN":
-        return JsonResponse({"status": "error", "message": "Access denied"})
+    if not request.user.user_type == "ADMIN":
+        return JsonResponse({
+            "status": "error",
+            "message": "Access denied. Only administrators can approve designers."
+        }, status=403)
     
-    designer = get_object_or_404(Designer, id=designer_id)
-    
-    # Approve the designer
-    designer.is_approved = True
-    designer.approval_date = timezone.now()
-    designer.save()
-    
-    # Add notification for designer
-    from notifications.utils import create_notification
-    create_notification(
-        designer.user,
-        "Congratulations! Your designer account has been approved.",
-        "designer_approved"
-    )
-    
-    return JsonResponse({
-        "status": "success", 
-        "message": "Designer approved successfully"
-    })
+    try:
+        designer = get_object_or_404(Designer, id=designer_id)
+        
+        # Approve the designer
+        designer.is_approved = True
+        designer.approval_date = timezone.now()
+        designer.save()
+        
+        # Add notification for designer
+        try:
+            from notifications.utils import send_notification
+            send_notification(
+                designer.user,
+                "Congratulations! Your designer account has been approved.",
+                notification_type="success"
+            )
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Notification send failed: {e}")
+        
+        return JsonResponse({
+            "status": "success",
+            "message": "Designer approved successfully"
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            "status": "error",
+            "message": str(e)
+        }, status=500)
 
 @login_required
 def admin_designer_designs(request, designer_id):

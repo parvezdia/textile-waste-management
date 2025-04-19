@@ -144,6 +144,9 @@ class FactoryPartner(models.Model):
     factory_details = models.OneToOneField(FactoryDetails, on_delete=models.CASCADE)
     waste_inventory = models.ManyToManyField("inventory.TextileWaste")
 
+    def __str__(self):
+        return self.factory_details.factory_name or f"{self.user.username}'s Factory"
+
     def upload_waste_details(self, waste):
         # Logic for uploading waste details
         pass
