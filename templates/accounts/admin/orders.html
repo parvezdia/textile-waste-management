@@ -1,26 +1,65 @@
 {% extends "base.html" %}
+{% load custom_filters %}
 
 {% block title %}Manage Orders | Admin Dashboard{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'accounts:admin_dashboard' %}">Admin Dashboard</a></li>
+    <nav aria-label="breadcrumb" class="bg-light p-3 rounded mb-4 shadow-sm">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'accounts:admin_dashboard' %}" class="text-decoration-none"><i class="fas fa-home"></i> Admin Dashboard</a></li>
             <li class="breadcrumb-item active" aria-current="page">Order Management</li>
         </ol>
     </nav>
 
-    <h1 class="mb-4">Order Management</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h2 mb-0">Order Management</h1>
+        <div class="d-flex gap-2">
+            <div class="btn-group">
+                <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-filter"></i> Filter
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#" data-filter="all">All Orders</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#" data-filter="Pending">Pending Orders</a></li>
+                    <li><a class="dropdown-item" href="#" data-filter="Processing">Processing Orders</a></li>
+                    <li><a class="dropdown-item" href="#" data-filter="Shipped">Shipped Orders</a></li>
+                    <li><a class="dropdown-item" href="#" data-filter="Delivered">Delivered Orders</a></li>
+                </ul>
+            </div>
+            <button class="btn btn-outline-secondary" id="refreshTable">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+    </div>
     
-    <div class="card shadow-sm">
-        <div class="card-header bg-info text-white">
-            <h5 class="card-title mb-0">Orders</h5>
+    <div class="card shadow">
+        <div class="card-header bg-gradient" style="background-color: #4158D0;background-image: linear-gradient(43deg, #4158D0 0%, #C850C0 46%, #FFCC70 100%);">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0 text-white">
+                    <i class="fas fa-shopping-cart me-2"></i>Orders Overview
+                </h5>
+                <div class="order-stats d-flex gap-3">
+                    <span class="badge bg-light text-dark">
+                        <i class="fas fa-clock text-warning"></i> Pending: <span id="pendingCount">0</span>
+                    </span>
+                    <span class="badge bg-light text-dark">
+                        <i class="fas fa-cog text-primary"></i> Processing: <span id="processingCount">0</span>
+                    </span>
+                    <span class="badge bg-light text-dark">
+                        <i class="fas fa-truck text-info"></i> Shipped: <span id="shippedCount">0</span>
+                    </span>
+                    <span class="badge bg-light text-dark">
+                        <i class="fas fa-check-circle text-success"></i> Delivered: <span id="deliveredCount">0</span>
+                    </span>
+                </div>
+            </div>
         </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-hover" id="ordersTable">
-                    <thead>
+                <table class="table table-hover align-middle" id="ordersTable">
+                    <thead class="table-light">
                         <tr>
                             <th>Order ID</th>
                             <th>Buyer</th>
@@ -34,72 +73,97 @@
                     </thead>
                     <tbody>
                         {% for order in orders %}
-                        <tr class="{% if order.status == 'PENDING' %}table-warning{% elif order.status == 'PROCESSING' %}table-primary{% elif order.status == 'SHIPPED' %}table-info{% elif order.status == 'DELIVERED' %}table-success{% elif order.status == 'CANCELLED' %}table-danger{% endif %}">
-                            <td>#{{ order.id }}</td>
-                            <td>{{ order.buyer.user.get_full_name|default:order.buyer.user.username }}</td>
-                            <td>{{ order.design.title }}</td>
-                            <td>{{ order.design.designer.user.get_full_name|default:order.design.designer.user.username }}</td>
-                            <td>{{ order.order_date|date:"M d, Y" }}</td>
-                            <td>${{ order.total_price }}</td>
+                        <tr class="align-middle">
                             <td>
-                                <span class="badge {% if order.status == 'PENDING' %}bg-warning{% elif order.status == 'PROCESSING' %}bg-primary{% elif order.status == 'SHIPPED' %}bg-info{% elif order.status == 'DELIVERED' %}bg-success{% elif order.status == 'CANCELLED' %}bg-danger{% endif %}">
-                                    {{ order.status }}
+                                <span class="fw-bold">#{{ order.id }}</span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-sm bg-primary rounded-circle me-2 d-flex align-items-center justify-content-center">
+                                        <span class="text-white">{{ order.buyer.user.get_full_name|default:order.buyer.user.username|make_list|first|upper }}</span>
+                                    </div>
+                                    <div class="user-info">
+                                        <h6 class="mb-0">{{ order.buyer.user.get_full_name|default:order.buyer.user.username }}</h6>
+                                        <small class="text-muted">{{ order.buyer.user.email }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="text-truncate d-inline-block" style="max-width: 200px;" title="{{ order.design.title }}">
+                                    {{ order.design.title }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-sm bg-info rounded-circle me-2 d-flex align-items-center justify-content-center">
+                                        <span class="text-white">{{ order.design.designer.user.get_full_name|default:order.design.designer.user.username|make_list|first|upper }}</span>
+                                    </div>
+                                    {{ order.design.designer.user.get_full_name|default:order.design.designer.user.username }}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <i class="far fa-calendar-alt me-2 text-muted"></i>
+                                    {{ order.order_date|date:"M d, Y" }}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="fw-bold">${{ order.total_price }}</span>
+                            </td>
+                            <td>
+                                <span class="badge rounded-pill {% if order.status == 'PENDING' %}bg-warning text-dark{% elif order.status == 'PROCESSING' %}bg-primary text-white{% elif order.status == 'SHIPPED' %}bg-info text-white{% elif order.status == 'DELIVERED' %}bg-success text-white{% elif order.status == 'CANCELED' %}bg-danger text-white{% endif %}">
+                                    <i class="fas {% if order.status == 'PENDING' %}fa-clock{% elif order.status == 'PROCESSING' %}fa-cog{% elif order.status == 'SHIPPED' %}fa-truck{% elif order.status == 'DELIVERED' %}fa-check-circle{% elif order.status == 'CANCELED' %}fa-times-circle{% endif %} me-1"></i>
+                                    {{ order.get_status_display }}
                                 </span>
                             </td>
                             <td>
                                 <div class="dropdown">
-                                    <button class="btn btn-sm btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton{{ order.id }}" data-bs-toggle="dropdown" aria-expanded="false">
-                                        Actions
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton{{ order.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="fas fa-ellipsis-v"></i>
                                     </button>
-                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton{{ order.id }}">
+                                    <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="dropdownMenuButton{{ order.id }}">
                                         <li>
                                             <button class="dropdown-item view-details-btn" data-id="{{ order.id }}">
-                                                <i class="fas fa-eye"></i> View Details
+                                                <i class="fas fa-eye text-primary"></i> View Details
                                             </button>
                                         </li>
                                         {% if order.status == 'PENDING' %}
                                         <li>
                                             <button class="dropdown-item approve-payment-btn" data-id="{{ order.id }}">
-                                                <i class="fas fa-check-circle"></i> Approve Payment
+                                                <i class="fas fa-check-circle text-success"></i> Approve Payment
                                             </button>
                                         </li>
                                         {% endif %}
                                         <li><hr class="dropdown-divider"></li>
-                                        <li class="dropdown-header">Update Status</li>
-                                        {% if order.status != 'PENDING' %}
                                         <li>
-                                            <button class="dropdown-item status-btn" data-id="{{ order.id }}" data-status="PENDING">
-                                                <span class="badge bg-warning">PENDING</span>
-                                            </button>
+                                            <h6 class="dropdown-header">Update Status</h6>
                                         </li>
-                                        {% endif %}
-                                        {% if order.status != 'PROCESSING' %}
-                                        <li>
-                                            <button class="dropdown-item status-btn" data-id="{{ order.id }}" data-status="PROCESSING">
-                                                <span class="badge bg-primary">PROCESSING</span>
-                                            </button>
-                                        </li>
-                                        {% endif %}
-                                        {% if order.status != 'SHIPPED' %}
-                                        <li>
-                                            <button class="dropdown-item status-btn" data-id="{{ order.id }}" data-status="SHIPPED">
-                                                <span class="badge bg-info">SHIPPED</span>
-                                            </button>
-                                        </li>
-                                        {% endif %}
-                                        {% if order.status != 'DELIVERED' %}
-                                        <li>
-                                            <button class="dropdown-item status-btn" data-id="{{ order.id }}" data-status="DELIVERED">
-                                                <span class="badge bg-success">DELIVERED</span>
-                                            </button>
-                                        </li>
-                                        {% endif %}
-                                        {% if order.status != 'CANCELLED' %}
-                                        <li>
-                                            <button class="dropdown-item status-btn" data-id="{{ order.id }}" data-status="CANCELLED">
-                                                <span class="badge bg-danger">CANCELLED</span>
-                                            </button>
-                                        </li>
+                                        {% if order.status == 'PENDING' %}
+                                            {% for status in "PROCESSING,SHIPPED,DELIVERED"|split:"," %}
+                                            <li>
+                                                <button class="dropdown-item status-btn" data-id="{{ order.id }}" data-status="{{ status }}">
+                                                    <span class="badge {% if status == 'PROCESSING' %}bg-primary text-white{% elif status == 'SHIPPED' %}bg-info text-white{% elif status == 'DELIVERED' %}bg-success text-white{% endif %}">
+                                                        {{ status|title }}
+                                                    </span>
+                                                </button>
+                                            </li>
+                                            {% endfor %}
+                                        {% elif order.status == 'PROCESSING' %}
+                                            {% for status in "SHIPPED,DELIVERED"|split:"," %}
+                                            <li>
+                                                <button class="dropdown-item status-btn" data-id="{{ order.id }}" data-status="{{ status }}">
+                                                    <span class="badge {% if status == 'SHIPPED' %}bg-info text-white{% elif status == 'DELIVERED' %}bg-success text-white{% endif %}">
+                                                        {{ status|title }}
+                                                    </span>
+                                                </button>
+                                            </li>
+                                            {% endfor %}
+                                        {% elif order.status == 'SHIPPED' %}
+                                            <li>
+                                                <button class="dropdown-item status-btn" data-id="{{ order.id }}" data-status="DELIVERED">
+                                                    <span class="badge bg-success text-white">Delivered</span>
+                                                </button>
+                                            </li>
                                         {% endif %}
                                     </ul>
                                 </div>
@@ -107,7 +171,13 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="8" class="text-center">No orders found</td>
+                            <td colspan="8" class="text-center py-5">
+                                <div class="text-muted">
+                                    <i class="fas fa-box-open fa-3x mb-3"></i>
+                                    <h5>No orders found</h5>
+                                    <p>There are currently no orders in the system</p>
+                                </div>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -121,65 +191,218 @@
 <div class="modal fade" id="orderDetailsModal" tabindex="-1" aria-labelledby="orderDetailsModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="orderDetailsModalLabel">Order Details</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-header bg-gradient text-white" style="background-color: #4158D0;background-image: linear-gradient(43deg, #4158D0 0%, #C850C0 46%, #FFCC70 100%);">
+                <h5 class="modal-title" id="orderDetailsModalLabel">
+                    <i class="fas fa-info-circle me-2"></i>Order Details
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="row">
+                <div class="row g-4">
                     <div class="col-md-6">
-                        <h6>Order Information</h6>
-                        <p><strong>Order ID:</strong> <span id="orderDetailId"></span></p>
-                        <p><strong>Date:</strong> <span id="orderDetailDate"></span></p>
-                        <p><strong>Status:</strong> <span id="orderDetailStatus"></span></p>
-                        <p><strong>Total:</strong> $<span id="orderDetailTotal"></span></p>
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h6 class="card-title mb-3">
+                                    <i class="fas fa-shopping-cart text-primary me-2"></i>Order Information
+                                </h6>
+                                <div class="mb-2">
+                                    <small class="text-muted">Order ID</small>
+                                    <p class="mb-0 fw-bold" id="orderDetailId"></p>
+                                </div>
+                                <div class="mb-2">
+                                    <small class="text-muted">Date</small>
+                                    <p class="mb-0" id="orderDetailDate"></p>
+                                </div>
+                                <div class="mb-2">
+                                    <small class="text-muted">Status</small>
+                                    <p class="mb-0" id="orderDetailStatus"></p>
+                                </div>
+                                <div class="mb-0">
+                                    <small class="text-muted">Total</small>
+                                    <p class="mb-0 fw-bold" id="orderDetailTotal"></p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="col-md-6">
-                        <h6>Buyer Information</h6>
-                        <p><strong>Name:</strong> <span id="orderDetailBuyer"></span></p>
-                        <p><strong>Email:</strong> <span id="orderDetailEmail"></span></p>
-                        <p><strong>Phone:</strong> <span id="orderDetailPhone"></span></p>
-                        <p><strong>Address:</strong> <span id="orderDetailAddress"></span></p>
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <h6 class="card-title mb-3">
+                                    <i class="fas fa-user text-info me-2"></i>Buyer Information
+                                </h6>
+                                <div class="mb-2">
+                                    <small class="text-muted">Name</small>
+                                    <p class="mb-0" id="orderDetailBuyer"></p>
+                                </div>
+                                <div class="mb-2">
+                                    <small class="text-muted">Email</small>
+                                    <p class="mb-0" id="orderDetailEmail"></p>
+                                </div>
+                                <div class="mb-2">
+                                    <small class="text-muted">Phone</small>
+                                    <p class="mb-0" id="orderDetailPhone"></p>
+                                </div>
+                                <div class="mb-0">
+                                    <small class="text-muted">Address</small>
+                                    <p class="mb-0" id="orderDetailAddress"></p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <hr>
-                <div class="row">
                     <div class="col-md-12">
-                        <h6>Design Information</h6>
-                        <p><strong>Design:</strong> <span id="orderDetailDesign"></span></p>
-                        <p><strong>Designer:</strong> <span id="orderDetailDesigner"></span></p>
-                        <p><strong>Description:</strong> <span id="orderDetailDescription"></span></p>
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title mb-3">
+                                    <i class="fas fa-palette text-success me-2"></i>Design Information
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-4 mb-2">
+                                        <small class="text-muted">Design</small>
+                                        <p class="mb-0" id="orderDetailDesign"></p>
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <small class="text-muted">Designer</small>
+                                        <p class="mb-0" id="orderDetailDesigner"></p>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <small class="text-muted">Description</small>
+                                        <p class="mb-0" id="orderDetailDescription"></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <hr>
-                <div class="row">
                     <div class="col-md-12">
-                        <h6>Payment Information</h6>
-                        <p><strong>Payment Method:</strong> <span id="orderDetailPaymentMethod"></span></p>
-                        <p><strong>Payment Status:</strong> <span id="orderDetailPaymentStatus"></span></p>
-                        <p><strong>Transaction ID:</strong> <span id="orderDetailTransactionId"></span></p>
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title mb-3">
+                                    <i class="fas fa-credit-card text-warning me-2"></i>Payment Information
+                                </h6>
+                                <div class="row">
+                                    <div class="col-md-4 mb-2">
+                                        <small class="text-muted">Payment Method</small>
+                                        <p class="mb-0" id="orderDetailPaymentMethod"></p>
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <small class="text-muted">Payment Status</small>
+                                        <p class="mb-0" id="orderDetailPaymentStatus"></p>
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <small class="text-muted">Transaction ID</small>
+                                        <p class="mb-0" id="orderDetailTransactionId"></p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Close
+                </button>
             </div>
         </div>
     </div>
 </div>
+
+<!-- CSS for custom styling -->
+<style>
+    .avatar-sm {
+        width: 32px;
+        height: 32px;
+        font-size: 0.875rem;
+    }
+    
+    .order-stats .badge {
+        font-size: 0.875rem;
+        padding: 0.5rem 1rem;
+    }
+    
+    .table > :not(caption) > * > * {
+        padding: 1rem 0.75rem;
+    }
+    
+    .dropdown-item {
+        padding: 0.5rem 1rem;
+    }
+    
+    .dropdown-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .card {
+        border: none;
+        border-radius: 0.5rem;
+    }
+    
+    .modal-content {
+        border: none;
+        border-radius: 0.5rem;
+    }
+    
+    .modal-header {
+        border-top-left-radius: 0.5rem;
+        border-top-right-radius: 0.5rem;
+    }
+</style>
 {% endblock %}
 
-{% block scripts %}
+{% block extra_js %}
 <script>
     $(document).ready(function() {
         // Initialize DataTable
-        $('#ordersTable').DataTable({
+        const table = $('#ordersTable').DataTable({
             order: [[4, 'desc']], // Sort by date descending
             columnDefs: [
                 { orderable: false, targets: 7 } // Disable sorting for actions column
             ]
         });
+        // Update order overview counts
+        function updateOrderStats() {
+            let pend = 0, proc = 0, ship = 0, del = 0;
+            // Count over all table rows (ignore filters)
+            $(table.rows().nodes()).each(function() {
+                const statusText = $(this).find('td:eq(6) span.badge').text().trim();
+                if (statusText === 'Pending') pend++;
+                if (statusText === 'PROCESSING') proc++;
+                if (statusText === 'Shipped') ship++;
+                if (statusText === 'Delivered') del++;
+            });
+            $('#pendingCount').text(pend);
+            $('#processingCount').text(proc);
+            $('#shippedCount').text(ship);
+            $('#deliveredCount').text(del);
+        }
+        // Recompute stats when table is redrawn (e.g., filters, pagination)
+        table.on('draw', updateOrderStats);
+        // Compute initial stats (filtered rows)
+        updateOrderStats();
         
+        // Mappings for dynamic badge updates
+        const badgeClasses = {
+            'PENDING': 'bg-warning text-dark',
+            'PROCESSING': 'bg-primary text-white',
+            'SHIPPED': 'bg-info text-white',
+            'DELIVERED': 'bg-success text-white',
+            'CANCELED': 'bg-danger text-white'
+        };
+        const badgeIcons = {
+            'PENDING': 'fa-clock',
+            'PROCESSING': 'fa-cog',
+            'SHIPPED': 'fa-truck',
+            'DELIVERED': 'fa-check-circle',
+            'CANCELED': 'fa-times-circle'
+        };
+        // Function to update row badge and overview
+        function updateRowStatus(orderId, newStatus) {
+            const $row = $('#ordersTable button.status-btn[data-id="' + orderId + '"]').closest('tr');
+            const displayText = newStatus.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+            const html = `<span class="badge rounded-pill ${badgeClasses[newStatus]}"><i class="fas ${badgeIcons[newStatus]} me-1"></i>${displayText}</span>`;
+            $row.find('td:eq(6)').html(html);
+            updateOrderStats();
+        }
+
         // Handle view details button click
         $('.view-details-btn').click(function() {
             const orderId = $(this).data('id');
@@ -257,7 +480,7 @@
         });
         
         // Handle status update button click
-        $('.status-btn').click(function() {
+        $(document).on('click', '.status-btn', function() {
             const orderId = $(this).data('id');
             const status = $(this).data('status');
             
@@ -267,7 +490,7 @@
                 'PROCESSING': 'Processing',
                 'SHIPPED': 'Shipped',
                 'DELIVERED': 'Delivered',
-                'CANCELLED': 'Cancelled'
+                'CANCELED': 'Cancelled'
             };
             
             // Show confirmation using SweetAlert2
@@ -298,7 +521,7 @@
                                     text: response.message,
                                     icon: 'success'
                                 }).then(() => {
-                                    location.reload();
+                                    updateRowStatus(orderId, status);
                                 });
                             } else {
                                 Swal.fire({
@@ -335,6 +558,21 @@
             }
             return cookieValue;
         }
+
+        // Filter orders by status (display text) on Status column
+        $('[data-filter]').on('click', function(e) {
+            e.preventDefault();
+            var filter = $(this).data('filter');
+            if (filter === 'all') {
+                table.column(6).search('').draw();
+            } else {
+                table.column(6).search(filter, false, false).draw();
+            }
+        });
+        // Refresh: clear Status column filter only
+        $('#refreshTable').on('click', function() {
+            table.column(6).search('').draw();
+        });
     });
 </script>
 {% endblock %}
