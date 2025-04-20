@@ -25,10 +25,10 @@ def approved_designer_required(view_func):
             messages.warning(
                 request,
                 "Your designer account is pending approval. Please wait for admin approval.",
+                extra_tags='warning swal'
             )
-            return redirect("designs:design_list")
+            return redirect("accounts:profile_setup")
         return view_func(request, *args, **kwargs)
-
     return wrapper
 
 

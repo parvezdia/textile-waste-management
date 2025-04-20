@@ -37,14 +37,13 @@ def register(request):
             if user.user_type == "DESIGNER":
                 messages.info(
                     request, 
-                    'Your designer account has been created and is pending admin approval. '
-                    'You will be prompted to complete your profile once approved.'
+                    'Your designer account has been created and is pending admin approval. Please complete your profile setup first.',
+                    extra_tags='info swal'
                 )
-                return redirect("designs:design_list")
+                return redirect("accounts:profile_setup")
             else:
-                messages.success(request, "Registration successful! Please complete your profile.")
-
-            return redirect("accounts:profile_setup")
+                messages.success(request, "Registration successful! Please complete your profile.", extra_tags='success swal')
+                return redirect("accounts:profile_setup")
     else:
         form = UserRegistrationForm()
     return render(request, "accounts/register.html", {"form": form})
@@ -77,10 +76,10 @@ def user_login(request):
                         if not designer.is_approved:
                             messages.warning(
                                 request,
-                                "Your designer account is pending approval. "
-                                "You will be notified once your account is approved.",
+                                "Your designer account is pending approval. Please wait for admin approval.",
+                                extra_tags='warning swal'
                             )
-                            return redirect("designs:design_list")
+                            return redirect("accounts:profile_setup")
                         elif not all([
                             contact_info and contact_info.address and contact_info.phone
                         ]):
@@ -111,7 +110,9 @@ def user_login(request):
                                 return redirect("inventory:dashboard")
 
                         messages.warning(
-                            request, "Please complete your factory profile setup."
+                            request, 
+                            "Please complete your factory profile setup.",
+                            extra_tags='warning swal'
                         )
                         return redirect("accounts:profile_setup")
 
@@ -120,6 +121,11 @@ def user_login(request):
                         if hasattr(user, "buyer"):
                             return redirect("designs:design_list")
                         else:
+                            messages.info(
+                                request,
+                                "Please complete your buyer profile to continue.",
+                                extra_tags='info swal'
+                            )
                             return redirect("accounts:profile_setup")
                             
                     # For admin users
@@ -128,9 +134,14 @@ def user_login(request):
                         admin_profile = getattr(user, "admin", None)
                         contact_info = user.contact_info
                         if admin_profile and contact_info and contact_info.address and contact_info.phone:
+                            messages.success(request, "Login successful!", extra_tags='success swal')
                             return redirect("accounts:admin_dashboard")  # Redirect to admin dashboard
                         else:
-                            messages.warning(request, "Please complete your admin profile setup.")
+                            messages.warning(
+                                request, 
+                                "Please complete your admin profile setup.",
+                                extra_tags='warning swal'
+                            )
                             return redirect("accounts:profile_setup")
 
                     return redirect("accounts:profile")
@@ -235,15 +246,23 @@ def profile_setup(request):
         except (AttributeError, ObjectDoesNotExist):
             pass
     
-    # Check if profile is complete for approved designers
+    # Check if profile is complete for designers
     elif user.user_type == "DESIGNER" and hasattr(user, "designer"):
         designer = user.designer
         contact_info = user.contact_info
-        # Only redirect if this is not an edit request
-        if designer.is_approved and all([
+        # Only redirect if profile is complete and this is not an edit request
+        if all([
             contact_info and contact_info.address and contact_info.phone
         ]) and request.GET.get('edit') != 'true':
-            return redirect("designs:designer_dashboard")
+            if designer.is_approved:
+                return redirect("designs:designer_dashboard")
+            else:
+                messages.warning(
+                    request,
+                    "Your designer account is pending approval. Please wait for admin approval.",
+                    extra_tags='warning swal'
+                )
+                return redirect("accounts:profile_setup")  # Changed from landing_page to profile_setup
     
     # Check if profile is complete for admin users
     elif user.user_type == "ADMIN" and hasattr(user, "admin"):
@@ -328,6 +347,13 @@ def profile_setup(request):
                         designer_profile.save()
                         
                         messages.success(request, "Designer profile updated successfully!")
+                        if not designer_profile.is_approved:
+                            messages.warning(
+                                request,
+                                "Your designer account is pending approval. Please wait for admin approval.",
+                                extra_tags='warning swal'
+                            )
+                            return redirect("accounts:profile_setup")
                         return redirect("designs:designer_dashboard")
                 except Exception as e:
                     messages.error(request, f"Error saving profile: {str(e)}")

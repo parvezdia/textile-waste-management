@@ -14,6 +14,14 @@ from .models import Design, CustomizationOption
 
 
 def design_list(request):
+    # Prevent unapproved designers from viewing designs list
+    if request.user.is_authenticated and hasattr(request.user, 'designer') and not request.user.designer.is_approved:
+        messages.warning(
+            request,
+            "Your designer account is pending approval. Please wait for admin approval.",
+            extra_tags='warning swal'
+        )
+        return redirect("accounts:profile_setup")
     # Start with base query for published designs
     designs_query = Design.objects.filter(status="PUBLISHED")
     
@@ -202,27 +210,27 @@ def design_create(request):
                         options_formset.instance = design
                         options_formset.save()
                 
-                messages.success(request, "Design created successfully!")
+                messages.success(request, "Design created successfully!", extra_tags='success swal')
                 return redirect("designs:design_detail", design_id=design.design_id)
                 
             except Exception as e:
                 # Roll back any partial changes
-                messages.error(request, f"Error creating design: {str(e)}")
+                messages.error(request, f"Error creating design: {str(e)}", extra_tags='error swal')
         else:
             if not forms_valid:
                 for field, errors in form.errors.items():
                     for error in errors:
-                        messages.error(request, f"{field}: {error}")
+                        messages.error(request, f"{field}: {error}", extra_tags='error swal')
             
             if not materials_valid:
                 for form_errors in materials_formset.errors:
                     for field, errors in form_errors.items():
-                        messages.error(request, f"Material {field}: {', '.join(errors)}")
+                        messages.error(request, f"Material {field}: {', '.join(errors)}", extra_tags='error swal')
             
             if form.cleaned_data.get('is_customizable', False) and not options_valid:
                 for form_errors in options_formset.errors:
                     for field, errors in form_errors.items():
-                        messages.error(request, f"Customization {field}: {', '.join(errors)}")
+                        messages.error(request, f"Customization {field}: {', '.join(errors)}", extra_tags='error swal')
     else:
         form = DesignForm()
         options_formset = CustomizationOptionFormSet(prefix='options')
