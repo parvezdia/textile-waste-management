@@ -119,6 +119,12 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'designer_waste_list' %}active{% endif %}" 
+                           href="{% url 'inventory:designer_waste_list' %}">
+                            <i class="fas fa-recycle me-1"></i>Available Waste
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link {% if 'designs' in request.path and request.resolver_match.url_name != 'designer_dashboard' %}active{% endif %}" 
                            href="{% url 'designs:design_list' %}">Designs</a>
                     </li>

@@ -33,4 +33,7 @@ urlpatterns = [
     path("api/impact-metrics/", views.get_impact_metrics, name="api_impact_metrics"),
     path("api/trend-metrics/", views.get_trend_metrics, name="api_trend_metrics"),
     path("api/activities/", views.get_recent_activities, name="api_activities"),  # New endpoint for recent activities
+    # Designer views
+    path("designer/waste-list/", views.designer_waste_list, name="designer_waste_list"),
+    path("designer/waste/", views.designer_waste_list, name="designer_waste_list"),
 ]

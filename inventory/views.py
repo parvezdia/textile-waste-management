@@ -975,3 +975,27 @@ def reject_waste(request, waste_id):
     
     messages.success(request, f"Waste item {waste_id} has been rejected.")
     return redirect("accounts:admin_factory_waste")
+
+
+@login_required
+def designer_waste_list(request):
+    """View for designers to see approved factory waste"""
+    if not hasattr(request.user, "designer"):
+        messages.error(request, "Access denied. Designer privileges required.")
+        return redirect("home")
+
+    # Get only approved/available waste items
+    waste_items = TextileWaste.objects.filter(status="AVAILABLE").order_by("-date_added")
+
+    # Pagination
+    paginator = Paginator(waste_items, 10)
+    page = request.GET.get("page")
+    waste_items = paginator.get_page(page)
+
+    return render(
+        request,
+        "inventory/designer_waste_list.html",
+        {
+            "waste_items": waste_items,
+        },
+    )
