@@ -10,9 +10,11 @@
     </div>
     <div class="col-md-4 text-end">
         {% if order %}
-            <a href="{% url 'orders:order_detail' order.order_id %}" class="btn btn-secondary">Back to Order</a>
-        {% else %}
+            <a href="{% url 'orders:order_list' %}" class="btn btn-secondary">Back to Orders</a>
+        {% elif design and design.design_id %}
             <a href="{% url 'designs:design_detail' design.design_id %}" class="btn btn-secondary">Back to Design</a>
+        {% else %}
+            <a href="{% url 'orders:order_list' %}" class="btn btn-secondary">Back to Orders</a>
         {% endif %}
     </div>
 </div>
@@ -21,6 +23,7 @@
     <div class="col-md-8">
         <div class="card">
             <div class="card-body">
+                {% if design %}
                 <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
                     
@@ -43,7 +46,8 @@
                                                 <img src="{{ design.image.url }}" class="img-fluid rounded" alt="{{ design.name }}">
                                             {% endif %}
                                         </div>
-                                        <div class="col-md-8">                                            <h6>{{ design.name }}</h6>
+                                        <div class="col-md-8">
+                                            <h6>{{ design.name }}</h6>
                                             <p class="small text-muted">{{ design.description }}</p>
                                             <p class="mb-0"><strong>Designer:</strong> {{ design.designer.user.username }}</p>
                                             <p><strong>Base Price:</strong> ${{ design.price }}</p>
@@ -74,7 +78,8 @@
                                 </div>
                             </div>
                         </div>
-                    </div>                    
+                    </div>
+                    
                     {% if design.customization_options %}
                     <h5 class="mb-3">Customization Options</h5>
                     {% for field_name, field in form.items %}
@@ -99,19 +104,25 @@
                         </div>
                         {% endif %}
                     {% endfor %}
-                    {% endif %}                    <!-- Hidden form field for customizations data with proper JSON format -->
+                    {% endif %}
+
+                    <!-- Hidden form field for customizations data with proper JSON format -->
                     <input type="hidden" name="customizations" id="id_customizations" value='{"Bag": "Large"}'>
                     
                     <!-- Hidden form field for design with proper id attribute -->
                     <input type="hidden" name="design" id="id_design" value="{{ design.id }}">
                     
                     <!-- Add a hidden input to ensure the form submits correctly -->
-                    <input type="hidden" name="submit_order" value="1"><!-- Notes field is removed as it's not in the OrderForm model -->
+                    <input type="hidden" name="submit_order" value="1">
+
+                    <!-- Notes field is removed as it's not in the OrderForm model -->
                     <div class="mb-3">
                         <label for="notes" class="form-label">Additional Notes</label>
                         <textarea name="notes" id="notes" class="form-control" rows="3"></textarea>
                         <div class="form-text">Add any special instructions or notes for the designer.</div>
-                    </div>                    <div class="row">
+                    </div>
+
+                    <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="quantity-input" class="form-label">Quantity</label>
@@ -124,7 +135,8 @@
                                     </div>
                                 {% endif %}
                             </div>
-                        </div><div class="col-md-6">
+                        </div>
+                        <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Estimated Total</label>
                                 <h4 class="text-primary" id="estimated-total">${{ estimated_total|default:design.price }}</h4>
@@ -134,7 +146,9 @@
                                 </div>
                             </div>
                         </div>
-                    </div>                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                         {% if order %}
                             <button type="submit" class="btn btn-primary">Update Order</button>
                         {% else %}
@@ -142,9 +156,26 @@
                         {% endif %}
                     </div>
                 </form>
+                {% else %}
+                <!-- No design selected - show informative content -->
+                <div class="text-center py-5">
+                    <img src="/static/img/order-placeholder.svg" alt="Select a Design" class="img-fluid mb-4" style="max-width: 200px; opacity: 0.6;">
+                    <h3 class="mb-3">Select a Design to Order</h3>
+                    <p class="lead text-muted mb-4">Browse our collection of sustainable textile designs to place your order.</p>
+                    <a href="{% url 'designs:design_list' %}" class="btn btn-primary btn-lg">
+                        <i class="bi bi-search me-2"></i>Browse Designs
+                    </a>
+                    <div class="mt-4">
+                        <p class="text-muted small">Looking for your existing orders? <a href="{% url 'orders:order_list' %}">View your order history</a></p>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
-    </div>    <div class="col-md-4">
+    </div>
+
+    {% if design %}
+    <div class="col-md-4">
         {% if selected_customizations %}
         <div class="card mb-3">
             <div class="card-header">
@@ -225,109 +256,161 @@
             </div>
         </div>
     </div>
+    {% elif not design %}
+    <!-- Show popular designs sidebar when no design is selected -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">Why Choose Us?</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-3 d-flex">
+                        <i class="bi bi-recycle me-3 text-success" style="font-size: 1.5rem;"></i>
+                        <div>
+                            <h6>Sustainable Materials</h6>
+                            <p class="text-muted small">All our designs use recycled textile waste, reducing environmental impact.</p>
+                        </div>
+                    </li>
+                    <li class="mb-3 d-flex">
+                        <i class="bi bi-award me-3 text-success" style="font-size: 1.5rem;"></i>
+                        <div>
+                            <h6>Quality Craftsmanship</h6>
+                            <p class="text-muted small">Skilled artisans transform waste materials into premium products.</p>
+                        </div>
+                    </li>
+                    <li class="mb-3 d-flex">
+                        <i class="bi bi-people me-3 text-success" style="font-size: 1.5rem;"></i>
+                        <div>
+                            <h6>Support Local Designers</h6>
+                            <p class="text-muted small">Your purchase directly supports talented local designers and communities.</p>
+                        </div>
+                    </li>
+                    <li class="d-flex">
+                        <i class="bi bi-gear-wide-connected me-3 text-success" style="font-size: 1.5rem;"></i>
+                        <div>
+                            <h6>Customizable Designs</h6>
+                            <p class="text-muted small mb-0">Personalize your order with various customization options.</p>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Initialize form fields with Bootstrap validation classes
-        const form = document.querySelector('form');
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize form fields with Bootstrap validation classes
+    const form = document.querySelector('form');
+    if (form) {
         Array.from(form.elements).forEach(element => {
             if (element.type !== 'hidden' && element.type !== 'submit') {
                 element.classList.add('form-control');
                 if (element.required) {
                     element.classList.add('required');
                 }
-            }        });
-        
-        // Handle dynamic price calculation based on quantity and customizations
-        const basePrice = parseFloat({{ base_price|default:design.price }});
-        const customizationCost = parseFloat({{ customization_cost|default:0 }});
-        const unitPrice = basePrice + customizationCost; // Price with customizations for one unit
-          // Find the quantity input using multiple possible selectors
-        // Based on the form definition in orders/forms.py, it has id="quantity-input"
-        const quantityInput = document.getElementById('quantity-input') ||
-                             document.querySelector('input[name="quantity"]') ||
-                             document.getElementById('id_quantity');
-        
-        const estimatedTotalElement = document.getElementById('estimated-total');
-        const summaryQuantityElement = document.getElementById('summary-quantity');
-        const summaryTotalElement = document.getElementById('summary-total');
-        const customizationCostElement = document.getElementById('customization-cost');
-        
-        console.log('Base Price:', basePrice);
-        console.log('Customization Cost:', customizationCost);
-        console.log('Unit Price:', unitPrice);
-        console.log('Found quantity input:', quantityInput ? 'Yes' : 'No');
-          // Get maximum available quantity
-        const maxAvailableQuantity = {{ design.get_available_quantity }};
-          // Function to update price calculations
-        function updatePriceCalculations() {
-            const quantity = parseInt(quantityInput.value) || 1;
-            
-            // Check if quantity is within valid range
-            if (quantity < 1) {
-                quantityInput.value = 1;
-                return updatePriceCalculations();
             }
-            
-            if (quantity > maxAvailableQuantity) {
-                quantityInput.value = maxAvailableQuantity;
-                // Only show alert if user tries to manually increase beyond max
-                if (document.activeElement === quantityInput) {
-                    alert(`Only ${maxAvailableQuantity} unit(s) of this design are available.`);
-                }
-                return updatePriceCalculations();
-            }
-            
-            // Calculate total price including customization costs
-            const totalPrice = (unitPrice * quantity).toFixed(2);
-            const totalCustomizationCost = (customizationCost * quantity).toFixed(2);
-            
-            // Update display elements
-            if (estimatedTotalElement) estimatedTotalElement.textContent = '$' + totalPrice;
-            if (summaryQuantityElement) summaryQuantityElement.textContent = quantity;
-            if (summaryTotalElement) summaryTotalElement.textContent = '$' + totalPrice;
-            if (customizationCostElement) customizationCostElement.textContent = '$' + totalCustomizationCost;
-            
-            console.log('Quantity updated to:', quantity);
-            console.log('New total price:', totalPrice);
+        });
+    }
+    
+    {% if design %}
+    // Handle dynamic price calculation based on quantity and customizations
+    const basePrice = parseFloat({{ base_price|default:design.price }});
+    const customizationCost = parseFloat({{ customization_cost|default:0 }});
+    const unitPrice = basePrice + customizationCost; // Price with customizations for one unit
+    
+    // Find the quantity input using multiple possible selectors
+    const quantityInput = document.getElementById('quantity-input') ||
+                          document.querySelector('input[name="quantity"]') ||
+                          document.getElementById('id_quantity');
+    
+    const estimatedTotalElement = document.getElementById('estimated-total');
+    const summaryQuantityElement = document.getElementById('summary-quantity');
+    const summaryTotalElement = document.getElementById('summary-total');
+    const customizationCostElement = document.getElementById('customization-cost');
+    
+    console.log('Base Price:', basePrice);
+    console.log('Customization Cost:', customizationCost);
+    console.log('Unit Price:', unitPrice);
+    console.log('Found quantity input:', quantityInput ? 'Yes' : 'No');
+    
+    // Get maximum available quantity
+    const maxAvailableQuantity = {{ design.get_available_quantity|default:0 }};
+    
+    // Function to update price calculations
+    function updatePriceCalculations() {
+        const quantity = parseInt(quantityInput.value) || 1;
+        
+        // Check if quantity is within valid range
+        if (quantity < 1) {
+            quantityInput.value = 1;
+            return updatePriceCalculations();
         }
-          // Add event listeners
+        
+        if (quantity > maxAvailableQuantity) {
+            quantityInput.value = maxAvailableQuantity;
+            // Only show alert if user tries to manually increase beyond max
+            if (document.activeElement === quantityInput) {
+                alert(`Only ${maxAvailableQuantity} unit(s) of this design are available.`);
+            }
+            return updatePriceCalculations();
+        }
+        
+        // Calculate total price including customization costs
+        const totalPrice = (unitPrice * quantity).toFixed(2);
+        const totalCustomizationCost = (customizationCost * quantity).toFixed(2);
+        
+        // Update display elements
+        if (estimatedTotalElement) estimatedTotalElement.textContent = '$' + totalPrice;
+        if (summaryQuantityElement) summaryQuantityElement.textContent = quantity;
+        if (summaryTotalElement) summaryTotalElement.textContent = '$' + totalPrice;
+        if (customizationCostElement) customizationCostElement.textContent = '$' + totalCustomizationCost;
+        
+        console.log('Quantity updated to:', quantity);
+        console.log('New total price:', totalPrice);
+    }
+    
+    // Add event listeners
+    if (quantityInput) {
         quantityInput.addEventListener('input', updatePriceCalculations);
         quantityInput.addEventListener('change', updatePriceCalculations);
         
         // Initialize with default values
         updatePriceCalculations();
-        
-        // Handle customization option changes (if applicable)
-        const customizationSelects = document.querySelectorAll('select[name^="option_"]');
-        if (customizationSelects.length > 0) {
-            customizationSelects.forEach(select => {
-                select.addEventListener('change', function() {
-                    // This would be expanded to calculate additional costs from customizations
-                    // For now we're just handling quantity changes
-                    updatePriceCalculations();
-                });
+    }
+    
+    // Handle customization option changes (if applicable)
+    const customizationSelects = document.querySelectorAll('select[name^="option_"]');
+    if (customizationSelects.length > 0) {
+        customizationSelects.forEach(select => {
+            select.addEventListener('change', function() {
+                // This would be expanded to calculate additional costs from customizations
+                // For now we're just handling quantity changes
+                updatePriceCalculations();
             });
+        });
+    }
+    
+    // Add available quantity information
+    if (maxAvailableQuantity > 0 && quantityInput) {
+        const quantityLabel = document.querySelector('label[for="' + quantityInput.id + '"]');
+        if (quantityLabel) {
+            quantityLabel.innerHTML += ` <span class="badge bg-info">Available: ${maxAvailableQuantity}</span>`;
         }
-        
-        // Add available quantity information
-        if (maxAvailableQuantity > 0) {
-            const quantityLabel = document.querySelector('label[for="' + quantityInput.id + '"]');
-            if (quantityLabel) {
-                quantityLabel.innerHTML += ` <span class="badge bg-info">Available: ${maxAvailableQuantity}</span>`;
-            }
-        } else {
-            // If no quantity available, disable the order button
-            const orderButton = form.querySelector('button[type="submit"]');
-            if (orderButton) {
-                orderButton.disabled = true;
-                orderButton.textContent = 'Out of Stock';
-                orderButton.classList.replace('btn-primary', 'btn-secondary');
-            }
+    } else if (maxAvailableQuantity <= 0) {
+        // If no quantity available, disable the order button
+        const orderButton = form.querySelector('button[type="submit"]');
+        if (orderButton) {
+            orderButton.disabled = true;
+            orderButton.textContent = 'Out of Stock';
+            orderButton.classList.replace('btn-primary', 'btn-secondary');
         }
-    });
+    }
+    {% endif %}
+});
 </script>
 {% endblock %}

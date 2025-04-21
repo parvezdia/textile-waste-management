@@ -8,7 +8,9 @@
         <h2>Payment Information</h2>
     </div>
     <div class="col-md-4 text-end">
-        <a href="{% url 'orders:create_order' %}" class="btn btn-secondary">Back to Create Order</a>
+        <a href="{% url 'orders:create_order' order.design.design_id %}" class="btn btn-secondary">
+            Back to Order Details
+        </a>
     </div>
 </div>
 
@@ -67,29 +69,100 @@
                         {% endif %}
                     </div>
 
-                    <div class="mb-3">
-                        <label for="card_number" class="form-label">Card Number</label>
-                        <input type="text" name="card_number" id="card_number" class="form-control" placeholder="1234 5678 9012 3456" required>
-                    </div>
+                    <!-- Credit Card Section -->
+                    <div id="credit-card-fields" class="payment-method-fields">
+                        <h6 class="mb-3">Credit Card Details</h6>
+                        <div class="mb-3">
+                            <label for="card_number" class="form-label">Card Number</label>
+                            <input type="text" name="card_number" id="card_number" class="form-control" placeholder="1234 5678 9012 3456">
+                        </div>
 
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="expiry_date" class="form-label">Expiry Date</label>
-                                <input type="text" name="expiry_date" id="expiry_date" class="form-control" placeholder="MM/YY" required>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="expiry_date" class="form-label">Expiry Date</label>
+                                    <input type="text" name="expiry_date" id="expiry_date" class="form-control" placeholder="MM/YY">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="cvv" class="form-label">CVV</label>
+                                    <input type="text" name="cvv" id="cvv" class="form-control" placeholder="123">
+                                </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="cvv" class="form-label">CVV</label>
-                                <input type="text" name="cvv" id="cvv" class="form-control" placeholder="123" required>
-                            </div>
+
+                        <div class="mb-3">
+                            <label for="cardholder_name" class="form-label">Cardholder Name</label>
+                            <input type="text" name="cardholder_name" id="cardholder_name" class="form-control">
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="cardholder_name" class="form-label">Cardholder Name</label>
-                        <input type="text" name="cardholder_name" id="cardholder_name" class="form-control" required>
+                    <!-- Bank Transfer Section -->
+                    <div id="bank-transfer-fields" class="payment-method-fields">
+                        <h6 class="mb-3">Bank Transfer Details</h6>
+                        <div class="mb-3">
+                            <label for="bank_name" class="form-label">Bank Name</label>
+                            <input type="text" name="bank_name" id="bank_name" class="form-control">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="account_name" class="form-label">Account Holder Name</label>
+                            <input type="text" name="account_name" id="account_name" class="form-control">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="account_number" class="form-label">Account Number</label>
+                            <input type="text" name="account_number" id="account_number" class="form-control">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="routing_number" class="form-label">Routing Number</label>
+                            <input type="text" name="routing_number" id="routing_number" class="form-control">
+                        </div>
+                    </div>
+
+                    <!-- Digital Wallet Section -->
+                    <div id="digital-wallet-fields" class="payment-method-fields">
+                        <h6 class="mb-3">Digital Wallet</h6>
+                        <div class="mb-3">
+                            <label for="wallet_type" class="form-label">Select Wallet</label>
+                            <select name="wallet_type" id="wallet_type" class="form-select">
+                                <option value="PayPal">PayPal</option>
+                                <option value="Apple Pay">Apple Pay</option>
+                                <option value="Google Pay">Google Pay</option>
+                                <option value="Alipay">Alipay</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="wallet_email" class="form-label">Wallet Email/ID</label>
+                            <input type="email" name="wallet_email" id="wallet_email" class="form-control">
+                        </div>
+                    </div>
+
+                    <!-- Invoice Section -->
+                    <div id="invoice-fields" class="payment-method-fields">
+                        <h6 class="mb-3">Invoice Details</h6>
+                        <div class="mb-3">
+                            <label for="company_name" class="form-label">Company Name</label>
+                            <input type="text" name="company_name" id="company_name" class="form-control">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="tax_id" class="form-label">Tax ID/VAT Number</label>
+                            <input type="text" name="tax_id" id="tax_id" class="form-control">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="billing_address" class="form-label">Billing Address</label>
+                            <textarea name="billing_address" id="billing_address" class="form-control" rows="3"></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="purchase_order" class="form-label">Purchase Order Number (Optional)</label>
+                            <input type="text" name="purchase_order" id="purchase_order" class="form-control">
+                        </div>
                     </div>
 
                     <input type="hidden" name="payment_id" value="{{ form.payment_id.value|default:'' }}">
@@ -171,6 +244,46 @@
                 }
             }
         });
+
+        // Payment method switching logic
+        const paymentMethodSelect = document.getElementById('id_method');
+        const creditCardFields = document.getElementById('credit-card-fields');
+        const bankTransferFields = document.getElementById('bank-transfer-fields');
+        const digitalWalletFields = document.getElementById('digital-wallet-fields');
+        const invoiceFields = document.getElementById('invoice-fields');
+        
+        // Hide all payment method fields initially
+        const hideAllPaymentFields = () => {
+            document.querySelectorAll('.payment-method-fields').forEach(el => {
+                el.style.display = 'none';
+            });
+        };
+        
+        // Show fields based on selected payment method
+        const updatePaymentFields = () => {
+            hideAllPaymentFields();
+            
+            switch(paymentMethodSelect.value) {
+                case 'CREDIT_CARD':
+                    creditCardFields.style.display = 'block';
+                    break;
+                case 'BANK_TRANSFER':
+                    bankTransferFields.style.display = 'block';
+                    break;
+                case 'DIGITAL_WALLET':
+                    digitalWalletFields.style.display = 'block';
+                    break;
+                case 'INVOICE':
+                    invoiceFields.style.display = 'block';
+                    break;
+            }
+        };
+        
+        // Initialize with the current selection
+        updatePaymentFields();
+        
+        // Update when the payment method changes
+        paymentMethodSelect.addEventListener('change', updatePaymentFields);
 
         // Simple card number formatting
         const cardNumberInput = document.getElementById('card_number');

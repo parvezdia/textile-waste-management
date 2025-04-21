@@ -72,10 +72,11 @@
                                 <td>{{ order.design.designer.user.get_full_name }}</td>
                             {% endif %}
                             <td>
-                                <span class="badge bg-{{ order.status|lower }}">
+                                <span class="badge {% if order.status == 'PENDING' %}bg-warning text-dark{% elif order.status == 'CONFIRMED' %}bg-info text-dark{% elif order.status == 'IN_PRODUCTION' %}bg-primary text-white{% elif order.status == 'READY_FOR_DELIVERY' %}bg-secondary text-white{% elif order.status == 'SHIPPED' %}bg-info text-white{% elif order.status == 'DELIVERED' %}bg-success text-white{% elif order.status == 'CANCELED' %}bg-danger text-white{% else %}bg-secondary text-white{% endif %}">
                                     {{ order.get_status_display }}
                                 </span>
-                            </td>                            <td>{{ order.date_ordered|date:"M d, Y" }}</td>
+                            </td>
+                            <td>{{ order.date_ordered|date:"M d, Y" }}</td>
                             <td>${{ order.total_price }}</td>
                             <td class="text-end">
                                 <div class="btn-group">
