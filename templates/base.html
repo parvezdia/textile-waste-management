@@ -70,7 +70,17 @@
                         <a class="nav-link {% if request.resolver_match.url_name == 'landing_page' %}active{% endif %}" 
                            href="{% url 'landing_page' %}">Home</a>
                     </li>
-                    
+                    {% if not user.is_authenticated and request.resolver_match.url_name == 'landing_page' %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="#features">Features</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#stats">Impact</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#about">About</a>
+                        </li>
+                    {% endif %}
                     {% if user.is_authenticated and user.user_type == 'FACTORY' %}
                     <!-- Expanded Inventory Navigation for Factory Users -->
                     <li class="nav-item {% if 'inventory' in request.path and request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
