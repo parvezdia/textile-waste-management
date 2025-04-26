@@ -2,17 +2,20 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="/static/css/landing.css">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
 {% endblock %}
 
 {% block content %}
 <!-- Hero Section -->
-<section class="hero-section d-flex align-items-center text-center">
+<section class="hero-section">
     <div class="container">
-        <h1 class="display-3 fw-bold mb-4">Transform Textile Waste into Opportunity</h1>
-        <p class="lead mb-5">A revolutionary platform for sustainable textile waste management that helps your business reduce environmental impact while maximizing resources</p>
-        <div class="d-flex justify-content-center gap-3">
-            <a href="{% url 'accounts:register' %}" class="btn btn-success btn-lg">Get Started</a>
-            <a href="#features" class="btn btn-outline-light btn-lg">Learn More</a>
+        <div data-aos="fade-up" data-aos-duration="1000">
+            <h1>Transform Textile Waste into Opportunity</h1>
+            <p class="lead">A revolutionary platform for sustainable textile waste management that helps your business reduce environmental impact while maximizing resources</p>
+            <div class="d-flex justify-content-center gap-3">
+                <a href="{% url 'accounts:register' %}" class="btn btn-success">Get Started</a>
+                <a href="#features" class="btn btn-outline-light">Learn More</a>
+            </div>
         </div>
     </div>
     <div class="scroll-down text-white">
@@ -23,18 +26,18 @@
 <!-- Stats Section -->
 <section id="stats" class="stats-section">
     <div class="container">
-        <div class="row text-center">
+        <div class="row text-center" data-aos="fade-up">
             <div class="col-md-4 mb-4 mb-md-0">
-                <div class="stat-number">90%</div>
-                <div>Waste Reduction</div>
+                <div class="stat-number" data-aos="zoom-in" data-aos-delay="200">90%</div>
+                <div class="fs-5">Waste Reduction</div>
             </div>
             <div class="col-md-4 mb-4 mb-md-0">
-                <div class="stat-number">1000+</div>
-                <div>Active Users</div>
+                <div class="stat-number" data-aos="zoom-in" data-aos-delay="400">1000+</div>
+                <div class="fs-5">Active Users</div>
             </div>
             <div class="col-md-4">
-                <div class="stat-number">50K</div>
-                <div>Tons Recycled</div>
+                <div class="stat-number" data-aos="zoom-in" data-aos-delay="600">50K</div>
+                <div class="fs-5">Tons Recycled</div>
             </div>
         </div>
     </div>
@@ -43,11 +46,11 @@
 <!-- Features Section -->
 <section id="features" class="py-5">
     <div class="container py-5">
-        <h2 class="text-center display-5 mb-5">Key Features</h2>
+        <h2 class="text-center display-4 mb-5" data-aos="fade-up">Key Features</h2>
         <div class="row g-4">
-            <div class="col-md-4">
-                <div class="card feature-card h-100">
-                    <div class="card-body text-center p-4">
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="200">
+                <div class="card feature-card">
+                    <div class="card-body text-center p-5">
                         <div class="feature-icon">
                             <i class="fas fa-chart-line"></i>
                         </div>
@@ -56,9 +59,9 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="card feature-card h-100">
-                    <div class="card-body text-center p-4">
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="400">
+                <div class="card feature-card">
+                    <div class="card-body text-center p-5">
                         <div class="feature-icon">
                             <i class="fas fa-chart-pie"></i>
                         </div>
@@ -67,9 +70,9 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="card feature-card h-100">
-                    <div class="card-body text-center p-4">
+            <div class="col-md-4" data-aos="fade-up" data-aos-delay="600">
+                <div class="card feature-card">
+                    <div class="card-body text-center p-5">
                         <div class="feature-icon">
                             <i class="fas fa-leaf"></i>
                         </div>
@@ -83,56 +86,80 @@
 </section>
 
 <!-- About Section -->
-<section id="about" class="py-5 bg-light">
+<section id="about" class="about-section py-5 bg-light">
     <div class="container py-5">
         <div class="row align-items-center">
-            <div class="col-lg-6 mb-4 mb-lg-0">
-                <h2 class="display-5 mb-4">Revolutionizing Textile Waste Management</h2>
+            <div class="col-lg-6 mb-4 mb-lg-0" data-aos="fade-right">
+                <h2 class="display-4 mb-4">Revolutionizing Textile Waste Management</h2>
                 <p class="lead mb-4">Our system helps textile industries transition towards a circular economy by providing innovative solutions for waste management.</p>
-                <div class="d-flex flex-column gap-3">
+                <div class="d-flex flex-column gap-4">
                     <div class="d-flex align-items-center">
                         <i class="fas fa-check-circle text-success me-3 fa-2x"></i>
-                        <div>Reduce operational costs and environmental impact</div>
+                        <div class="fs-5">Reduce operational costs and environmental impact</div>
                     </div>
                     <div class="d-flex align-items-center">
                         <i class="fas fa-check-circle text-success me-3 fa-2x"></i>
-                        <div>Streamline waste collection and processing</div>
+                        <div class="fs-5">Streamline waste collection and processing</div>
                     </div>
                     <div class="d-flex align-items-center">
                         <i class="fas fa-check-circle text-success me-3 fa-2x"></i>
-                        <div>Generate detailed sustainability reports</div>
+                        <div class="fs-5">Generate detailed sustainability reports</div>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-6">
-                <img src="https://images.unsplash.com/photo-1581875403743-a3bf2cbed523?ixlib=rb-4.0.3" class="img-fluid rounded-3 shadow-lg" alt="Textile Industry">
+            <div class="col-lg-6" data-aos="fade-left">
+                <div style="position:relative; min-height:320px; min-width:320px; display:flex; align-items:center; justify-content:center;">
+                    <img src="https://images.unsplash.com/photo-1581875403743-a3bf2cbed523?ixlib=rb-4.0.3" class="img-fluid rounded-3 shadow-lg" alt="Textile Industry" style="max-width:100%; max-height:320px; object-fit:cover; background:#f3f3f3; display:block;" onerror="this.style.display='none'">
+                    <div style="position:absolute;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#e9ecef 60%,#f8f9fa 100%);border-radius:1rem;z-index:0;display:none;" class="img-placeholder"></div>
+                </div>
             </div>
         </div>
     </div>
 </section>
 
 <!-- Call to Action -->
-<section class="py-5 bg-success text-white">
-    <div class="container text-center py-5">
-        <h2 class="display-5 mb-4">Ready to Get Started?</h2>
-        <p class="lead mb-4">Join thousands of businesses already transforming their textile waste management</p>
-        <a href="{% url 'accounts:register' %}" class="btn btn-light btn-lg">Sign Up Now</a>
+<section class="cta-section py-5 text-white">
+    <div class="container text-center py-5" data-aos="zoom-in">
+        <h2 class="display-4 mb-4">Ready to Get Started?</h2>
+        <p class="lead mb-4 fs-4">Join thousands of businesses already transforming their textile waste management</p>
+        <a href="{% url 'accounts:register' %}" class="btn btn-light btn-lg px-5 py-3">Sign Up Now</a>
     </div>
 </section>
 
 <!-- Footer -->
-<footer class="bg-dark text-light py-4">
+<footer class="py-5">
     <div class="container">
         <div class="row">
             <div class="col-md-6 text-center text-md-start">
                 <p class="mb-0">&copy; 2024 Textile Fabric Waste Management System</p>
             </div>
             <div class="col-md-6 text-center text-md-end">
-                <a href="#" class="text-light me-3"><i class="fab fa-facebook"></i></a>
-                <a href="#" class="text-light me-3"><i class="fab fa-twitter"></i></a>
-                <a href="#" class="text-light"><i class="fab fa-linkedin"></i></a>
+                <a href="#" class="text-light me-3 fs-4"><i class="fab fa-facebook"></i></a>
+                <a href="#" class="text-light me-3 fs-4"><i class="fab fa-twitter"></i></a>
+                <a href="#" class="text-light fs-4"><i class="fab fa-linkedin"></i></a>
             </div>
         </div>
     </div>
 </footer>
+
+{% block extra_js %}
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+<script>
+    AOS.init({
+        duration: 800,
+        offset: 100,
+        once: true
+    });
+
+    // Smooth scroll for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            document.querySelector(this.getAttribute('href')).scrollIntoView({
+                behavior: 'smooth'
+            });
+        });
+    });
+</script>
+{% endblock %}
 {% endblock %}
