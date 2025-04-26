@@ -496,7 +496,18 @@ def delivery_info(request, order_id):
                     # Update order status to CONFIRMED now that payment and delivery info are complete
                     order.status = "CONFIRMED"
                     order.save()
-                    
+
+                    # Notify admin(s) of new confirmed order
+                    from django.contrib.auth import get_user_model
+                    from notifications.utils import send_notification
+                    admin_users = get_user_model().objects.filter(is_superuser=True)
+                    for admin_user in admin_users:
+                        send_notification(
+                            admin_user,
+                            f"A new order #{order.order_id} has been placed and is ready for processing.",
+                            notification_type="info"
+                        )
+
                     # Success message and redirect to order detail
                     messages.success(request, "Delivery information saved. Your order is now complete!")
                     return redirect("orders:order_detail", order_id=order_id)

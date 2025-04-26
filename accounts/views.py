@@ -35,6 +35,16 @@ def register(request):
 
             # Show appropriate message based on user type
             if user.user_type == "DESIGNER":
+                # Notify admin of new designer registration
+                from django.contrib.auth import get_user_model
+                from notifications.utils import send_notification
+                admin_user = get_user_model().objects.filter(is_superuser=True).first()
+                if admin_user:
+                    send_notification(
+                        admin_user,
+                        f"New designer account '{user.username}' has registered and is pending approval.",
+                        notification_type="info"
+                    )
                 messages.info(
                     request, 
                     'Your designer account has been created and is pending admin approval. Please complete your profile setup first.',

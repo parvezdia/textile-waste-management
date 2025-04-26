@@ -33,13 +33,10 @@ class NotificationHandler {
 
     handleNotification(data) {
         const { notification_type, message } = data;
-        
         // Show notification using SweetAlert2
         showNotification(notification_type.toLowerCase(), message);
-        
-        // Update badge count
-        this.unreadCount++;
-        this.updateBadge(this.unreadCount);
+        // Always update badge count from server for accuracy
+        updateNotificationCount();
     }
 
     updateBadge(count) {
@@ -91,8 +88,8 @@ const notificationPresets = {
     }
 };
 
-// Function to display a notification with SweetAlert2
-function showNotification(type, message) {
+// Make showNotification globally available
+window.showNotification = function(type, message) {
     if (typeof Swal !== 'undefined') {
         const preset = notificationPresets[type] || notificationPresets.info;
         Swal.fire({
@@ -108,10 +105,10 @@ function showNotification(type, message) {
     } else {
         console.log(`${type}: ${message}`);
     }
-}
+};
 
-// Function to mark a notification as read
-function markAsRead(notificationId) {
+// Make markAsRead globally available
+window.markAsRead = function(notificationId) {
     fetch(`/notifications/mark-read/${notificationId}/`, {
         method: 'POST',
         headers: {
@@ -128,6 +125,8 @@ function markAsRead(notificationId) {
             if (notificationElement) {
                 notificationElement.classList.remove('unread');
             }
+            // Show SweetAlert notification
+            window.showNotification('success', 'Notification marked as read');
         }
     });
 }

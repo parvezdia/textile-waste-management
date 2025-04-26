@@ -127,6 +127,17 @@ def upload_waste(request):
             new_usage = factory.factory_details.get_current_capacity_usage()
             log_capacity_change(factory, old_usage, new_usage, "waste_upload")
 
+            # Send notification to admin when waste is uploaded
+            from notifications.utils import send_notification
+            from django.contrib.auth import get_user_model
+            admin_user = get_user_model().objects.filter(is_superuser=True).first()
+            if admin_user:
+                send_notification(
+                    admin_user,
+                    f"New waste item '{waste.material}' uploaded by {request.user.username}.",
+                    notification_type='info'
+                )
+
             # Format user message based on new capacity
             capacity_msg = format_capacity_message(
                 new_usage,
