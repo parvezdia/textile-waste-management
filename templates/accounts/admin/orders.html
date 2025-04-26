@@ -23,9 +23,12 @@
                     <li><a class="dropdown-item" href="#" data-filter="all">All Orders</a></li>
                     <li><hr class="dropdown-divider"></li>
                     <li><a class="dropdown-item" href="#" data-filter="Pending">Pending Orders</a></li>
-                    <li><a class="dropdown-item" href="#" data-filter="Processing">Processing Orders</a></li>
+                    <li><a class="dropdown-item" href="#" data-filter="Confirmed">Confirmed Orders</a></li>
+                    <li><a class="dropdown-item" href="#" data-filter="In Production">In Production Orders</a></li>
+                    <li><a class="dropdown-item" href="#" data-filter="Ready for Delivery">Ready for Delivery Orders</a></li>
                     <li><a class="dropdown-item" href="#" data-filter="Shipped">Shipped Orders</a></li>
                     <li><a class="dropdown-item" href="#" data-filter="Delivered">Delivered Orders</a></li>
+                    <li><a class="dropdown-item" href="#" data-filter="Canceled">Canceled Orders</a></li>
                 </ul>
             </div>
             <button class="btn btn-outline-secondary" id="refreshTable">
@@ -45,13 +48,22 @@
                         <i class="fas fa-clock text-warning"></i> Pending: <span id="pendingCount">0</span>
                     </span>
                     <span class="badge bg-light text-dark">
-                        <i class="fas fa-cog text-primary"></i> Processing: <span id="processingCount">0</span>
+                        <i class="fas fa-check-circle text-success"></i> Confirmed: <span id="confirmedCount">0</span>
+                    </span>
+                    <span class="badge bg-light text-dark">
+                        <i class="fas fa-cog text-primary"></i> In Production: <span id="inProductionCount">0</span>
+                    </span>
+                    <span class="badge bg-light text-dark">
+                        <i class="fas fa-truck text-info"></i> Ready for Delivery: <span id="readyForDeliveryCount">0</span>
                     </span>
                     <span class="badge bg-light text-dark">
                         <i class="fas fa-truck text-info"></i> Shipped: <span id="shippedCount">0</span>
                     </span>
                     <span class="badge bg-light text-dark">
                         <i class="fas fa-check-circle text-success"></i> Delivered: <span id="deliveredCount">0</span>
+                    </span>
+                    <span class="badge bg-light text-dark">
+                        <i class="fas fa-times-circle text-danger"></i> Canceled: <span id="canceledCount">0</span>
                     </span>
                 </div>
             </div>
@@ -63,7 +75,6 @@
                         <tr>
                             <th>Order ID</th>
                             <th>Buyer</th>
-                            <th>Design</th>
                             <th>Designer</th>
                             <th>Date</th>
                             <th>Total</th>
@@ -89,11 +100,6 @@
                                 </div>
                             </td>
                             <td>
-                                <span class="text-truncate d-inline-block" style="max-width: 200px;" title="{{ order.design.title }}">
-                                    {{ order.design.title }}
-                                </span>
-                            </td>
-                            <td>
                                 <div class="d-flex align-items-center">
                                     <div class="avatar-sm bg-info rounded-circle me-2 d-flex align-items-center justify-content-center">
                                         <span class="text-white">{{ order.design.designer.user.get_full_name|default:order.design.designer.user.username|make_list|first|upper }}</span>
@@ -111,8 +117,24 @@
                                 <span class="fw-bold">${{ order.total_price }}</span>
                             </td>
                             <td>
-                                <span class="badge rounded-pill {% if order.status == 'PENDING' %}bg-warning text-dark{% elif order.status == 'PROCESSING' %}bg-primary text-white{% elif order.status == 'SHIPPED' %}bg-info text-white{% elif order.status == 'DELIVERED' %}bg-success text-white{% elif order.status == 'CANCELED' %}bg-danger text-white{% endif %}">
-                                    <i class="fas {% if order.status == 'PENDING' %}fa-clock{% elif order.status == 'PROCESSING' %}fa-cog{% elif order.status == 'SHIPPED' %}fa-truck{% elif order.status == 'DELIVERED' %}fa-check-circle{% elif order.status == 'CANCELED' %}fa-times-circle{% endif %} me-1"></i>
+                                <span class="badge rounded-pill 
+                                    {% if order.status == 'PENDING' %}bg-warning text-dark
+                                    {% elif order.status == 'CONFIRMED' %}bg-info text-dark
+                                    {% elif order.status == 'IN_PRODUCTION' %}bg-primary text-white
+                                    {% elif order.status == 'READY_FOR_DELIVERY' %}bg-secondary text-white
+                                    {% elif order.status == 'SHIPPED' %}bg-info text-dark
+                                    {% elif order.status == 'DELIVERED' %}bg-success text-white
+                                    {% elif order.status == 'CANCELED' %}bg-danger text-white
+                                    {% else %}bg-secondary text-white{% endif %}">
+                                    <i class="fas 
+                                        {% if order.status == 'PENDING' %}fa-clock
+                                        {% elif order.status == 'CONFIRMED' %}fa-check-double
+                                        {% elif order.status == 'IN_PRODUCTION' %}fa-cog
+                                        {% elif order.status == 'READY_FOR_DELIVERY' %}fa-truck-loading
+                                        {% elif order.status == 'SHIPPED' %}fa-truck
+                                        {% elif order.status == 'DELIVERED' %}fa-check-circle
+                                        {% elif order.status == 'CANCELED' %}fa-times-circle
+                                        {% else %}fa-info-circle{% endif %} me-1"></i>
                                     {{ order.get_status_display }}
                                 </span>
                             </td>
@@ -138,38 +160,31 @@
                                         <li>
                                             <h6 class="dropdown-header">Update Status</h6>
                                         </li>
-                                        {% if order.status == 'PENDING' %}
-                                            {% for status in "PROCESSING,SHIPPED,DELIVERED"|split:"," %}
+                                        {% for status, display in status_choices %}
+                                            {% if status in next_status_map|dict_get:order.status %}
                                             <li>
                                                 <button class="dropdown-item status-btn" data-id="{{ order.id }}" data-status="{{ status }}">
-                                                    <span class="badge {% if status == 'PROCESSING' %}bg-primary text-white{% elif status == 'SHIPPED' %}bg-info text-white{% elif status == 'DELIVERED' %}bg-success text-white{% endif %}">
-                                                        {{ status|title }}
+                                                    <span class="badge 
+                                                        {% if status == 'PENDING' %}bg-warning text-dark
+                                                        {% elif status == 'CONFIRMED' %}bg-info text-dark
+                                                        {% elif status == 'IN_PRODUCTION' %}bg-primary text-white
+                                                        {% elif status == 'READY_FOR_DELIVERY' %}bg-secondary text-white
+                                                        {% elif status == 'SHIPPED' %}bg-info text-dark
+                                                        {% elif status == 'DELIVERED' %}bg-success text-white
+                                                        {% elif status == 'CANCELED' %}bg-danger text-white
+                                                        {% else %}bg-secondary text-white{% endif %}">
+                                                        {{ display }}
                                                     </span>
                                                 </button>
                                             </li>
-                                            {% endfor %}
-                                        {% elif order.status == 'PROCESSING' %}
-                                            {% for status in "SHIPPED,DELIVERED"|split:"," %}
-                                            <li>
-                                                <button class="dropdown-item status-btn" data-id="{{ order.id }}" data-status="{{ status }}">
-                                                    <span class="badge {% if status == 'SHIPPED' %}bg-info text-white{% elif status == 'DELIVERED' %}bg-success text-white{% endif %}">
-                                                        {{ status|title }}
-                                                    </span>
-                                                </button>
-                                            </li>
-                                            {% endfor %}
-                                        {% elif order.status == 'SHIPPED' %}
-                                            <li>
-                                                <button class="dropdown-item status-btn" data-id="{{ order.id }}" data-status="DELIVERED">
-                                                    <span class="badge bg-success text-white">Delivered</span>
-                                                </button>
-                                            </li>
-                                        {% endif %}
+                                            {% endif %}
+                                        {% endfor %}
                                     </ul>
                                 </div>
                             </td>
                         </tr>
-                        {% empty %}
+                        {% endfor %}
+                        {% if orders|length == 0 %}
                         <tr>
                             <td colspan="8" class="text-center py-5">
                                 <div class="text-muted">
@@ -179,7 +194,7 @@
                                 </div>
                             </td>
                         </tr>
-                        {% endfor %}
+                        {% endif %}
                     </tbody>
                 </table>
             </div>
@@ -355,24 +370,30 @@
         const table = $('#ordersTable').DataTable({
             order: [[4, 'desc']], // Sort by date descending
             columnDefs: [
-                { orderable: false, targets: 7 } // Disable sorting for actions column
+                { orderable: false, targets: 6 } // Disable sorting for actions column
             ]
         });
         // Update order overview counts
         function updateOrderStats() {
-            let pend = 0, proc = 0, ship = 0, del = 0;
+            let pending = 0, confirmed = 0, inProduction = 0, readyForDelivery = 0, shipped = 0, delivered = 0, canceled = 0;
             // Count over all table rows (ignore filters)
             $(table.rows().nodes()).each(function() {
-                const statusText = $(this).find('td:eq(6) span.badge').text().trim();
-                if (statusText === 'Pending') pend++;
-                if (statusText === 'PROCESSING') proc++;
-                if (statusText === 'Shipped') ship++;
-                if (statusText === 'Delivered') del++;
+                const statusText = $(this).find('td:eq(5) span.badge').text().trim();
+                if (statusText === 'Pending') pending++;
+                if (statusText === 'Confirmed') confirmed++;
+                if (statusText === 'In Production') inProduction++;
+                if (statusText === 'Ready for Delivery') readyForDelivery++;
+                if (statusText === 'Shipped') shipped++;
+                if (statusText === 'Delivered') delivered++;
+                if (statusText === 'Canceled') canceled++;
             });
-            $('#pendingCount').text(pend);
-            $('#processingCount').text(proc);
-            $('#shippedCount').text(ship);
-            $('#deliveredCount').text(del);
+            $('#pendingCount').text(pending);
+            $('#confirmedCount').text(confirmed);
+            $('#inProductionCount').text(inProduction);
+            $('#readyForDeliveryCount').text(readyForDelivery);
+            $('#shippedCount').text(shipped);
+            $('#deliveredCount').text(delivered);
+            $('#canceledCount').text(canceled);
         }
         // Recompute stats when table is redrawn (e.g., filters, pagination)
         table.on('draw', updateOrderStats);
@@ -399,7 +420,7 @@
             const $row = $('#ordersTable button.status-btn[data-id="' + orderId + '"]').closest('tr');
             const displayText = newStatus.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
             const html = `<span class="badge rounded-pill ${badgeClasses[newStatus]}"><i class="fas ${badgeIcons[newStatus]} me-1"></i>${displayText}</span>`;
-            $row.find('td:eq(6)').html(html);
+            $row.find('td:eq(5)').html(html);
             updateOrderStats();
         }
 
@@ -564,14 +585,14 @@
             e.preventDefault();
             var filter = $(this).data('filter');
             if (filter === 'all') {
-                table.column(6).search('').draw();
+                table.column(5).search('').draw();
             } else {
-                table.column(6).search(filter, false, false).draw();
+                table.column(5).search(filter, false, false).draw();
             }
         });
         // Refresh: clear Status column filter only
         $('#refreshTable').on('click', function() {
-            table.column(6).search('').draw();
+            location.reload();
         });
     });
 </script>

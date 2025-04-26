@@ -757,11 +757,21 @@ def admin_orders(request):
         'buyer', 'buyer__user', 'design', 'design__designer'
     ).order_by('status', '-date_ordered')
     
+    next_status_map = {
+        'PENDING': ['CONFIRMED', 'CANCELED'],
+        'CONFIRMED': ['IN_PRODUCTION', 'CANCELED'],
+        'IN_PRODUCTION': ['READY_FOR_DELIVERY', 'CANCELED'],
+        'READY_FOR_DELIVERY': ['SHIPPED', 'CANCELED'],
+        'SHIPPED': ['DELIVERED', 'CANCELED'],
+        'DELIVERED': [],
+        'CANCELED': []
+    }
     context = {
         'user': user,
         'orders': orders,
+        'status_choices': Order.ORDER_STATUS_CHOICES,
+        'next_status_map': next_status_map,
     }
-    
     return render(request, "accounts/admin/orders.html", context)
 
 @login_required
@@ -780,7 +790,7 @@ def admin_update_order_status(request, order_id):
     order = get_object_or_404(Order, id=order_id)
     
     status = request.POST.get('status')
-    if status not in ["PENDING", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"]:
+    if status not in [s[0] for s in Order.ORDER_STATUS_CHOICES]:
         return JsonResponse({"status": "error", "message": "Invalid status"})
     
     # Update order status
