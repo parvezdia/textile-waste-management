@@ -1,0 +1,158 @@
+{
+  "factories": [
+    {
+      "username": "factory1",
+      "password": "password123",
+      "email": "factory1@example.com"
+    },
+    {
+      "username": "factory2",
+      "password": "password123",
+      "email": "factory2@example.com"
+    },
+    {
+      "username": "factory3",
+      "password": "password123",
+      "email": "factory3@example.com"
+    },
+    {
+      "username": "factory4",
+      "password": "password123",
+      "email": "factory4@example.com"
+    },
+    {
+      "username": "factory5",
+      "password": "password123",
+      "email": "factory5@example.com"
+    }
+  ],
+  "designers": [
+    {
+      "username": "designer1",
+      "password": "password123",
+      "email": "designer1@example.com"
+    },
+    {
+      "username": "designer2",
+      "password": "password123",
+      "email": "designer2@example.com"
+    },
+    {
+      "username": "designer3",
+      "password": "password123",
+      "email": "designer3@example.com"
+    },
+    {
+      "username": "designer4",
+      "password": "password123",
+      "email": "designer4@example.com"
+    },
+    {
+      "username": "designer5",
+      "password": "password123",
+      "email": "designer5@example.com"
+    },
+    {
+      "username": "designer6",
+      "password": "password123",
+      "email": "designer6@example.com"
+    },
+    {
+      "username": "designer7",
+      "password": "password123",
+      "email": "designer7@example.com"
+    },
+    {
+      "username": "designer8",
+      "password": "password123",
+      "email": "designer8@example.com"
+    },
+    {
+      "username": "designer9",
+      "password": "password123",
+      "email": "designer9@example.com"
+    },
+    {
+      "username": "designer10",
+      "password": "password123",
+      "email": "designer10@example.com"
+    }
+  ],
+  "buyers": [
+    {
+      "username": "buyer1",
+      "password": "password123",
+      "email": "buyer1@example.com"
+    },
+    {
+      "username": "buyer2",
+      "password": "password123",
+      "email": "buyer2@example.com"
+    },
+    {
+      "username": "buyer3",
+      "password": "password123",
+      "email": "buyer3@example.com"
+    },
+    {
+      "username": "buyer4",
+      "password": "password123",
+      "email": "buyer4@example.com"
+    },
+    {
+      "username": "buyer5",
+      "password": "password123",
+      "email": "buyer5@example.com"
+    },
+    {
+      "username": "buyer6",
+      "password": "password123",
+      "email": "buyer6@example.com"
+    },
+    {
+      "username": "buyer7",
+      "password": "password123",
+      "email": "buyer7@example.com"
+    },
+    {
+      "username": "buyer8",
+      "password": "password123",
+      "email": "buyer8@example.com"
+    },
+    {
+      "username": "buyer9",
+      "password": "password123",
+      "email": "buyer9@example.com"
+    },
+    {
+      "username": "buyer10",
+      "password": "password123",
+      "email": "buyer10@example.com"
+    },
+    {
+      "username": "buyer11",
+      "password": "password123",
+      "email": "buyer11@example.com"
+    },
+    {
+      "username": "buyer12",
+      "password": "password123",
+      "email": "buyer12@example.com"
+    },
+    {
+      "username": "buyer13",
+      "password": "password123",
+      "email": "buyer13@example.com"
+    },
+    {
+      "username": "buyer14",
+      "password": "password123",
+      "email": "buyer14@example.com"
+    },
+    {
+      "username": "buyer15",
+      "password": "password123",
+      "email": "buyer15@example.com"
+    }
+  ]
+}

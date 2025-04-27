@@ -1,6 +1,8 @@
 import random
 import uuid
 from datetime import datetime, timedelta
+import os
+import json
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
@@ -99,6 +101,8 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.SUCCESS(f'Created {len(buyers)} buyers'))
                 self.stdout.write(self.style.SUCCESS(f'Created {len(waste_items)} waste items'))
                 self.stdout.write(self.style.SUCCESS(f'Created {len(designs)} designs'))
+                # Save test user credentials for Locust
+                self._save_test_user_credentials(factories, designers, buyers)
                 
         except Exception as e:
             self.stdout.write(self.style.ERROR(f'Error generating dummy data: {str(e)}'))
@@ -567,3 +571,27 @@ class Command(BaseCommand):
             self.stdout.write(f'  Created design: {name} by {designer.user.get_full_name()} ({status})')
             
         return designs
+    
+    def _save_test_user_credentials(self, factories, designers, buyers):
+        """Save generated test user credentials to a JSON file for Locust"""
+        users = {
+            "factories": [
+                {"username": f.user.username, "password": "password123", "email": f.user.email}
+                for f in factories
+            ],
+            "designers": [
+                {"username": d.user.username, "password": "password123", "email": d.user.email}
+                for d in designers
+            ],
+            "buyers": [
+                {"username": b.user.username, "password": "password123", "email": b.user.email}
+                for b in buyers
+            ]
+        }
+        output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..', 'performance_tests')
+        output_dir = os.path.normpath(output_dir)
+        os.makedirs(output_dir, exist_ok=True)
+        output_path = os.path.join(output_dir, 'test_users.json')
+        with open(output_path, 'w', encoding='utf-8') as f:
+            json.dump(users, f, indent=2)
+        self.stdout.write(self.style.SUCCESS(f'Saved test user credentials to {output_path}'))

@@ -6,3 +6,4 @@ scikit-image>=0.22.0
 opencv-python>=4.8.0
 torch>=2.2.0
 torchvision>=0.17.0
+locust>=2.15.1
