@@ -1,9 +1,10 @@
-from django.test import TestCase
+from django.test import TestCase, Client
+from django.urls import reverse
 from django.contrib.auth import get_user_model
 from decimal import Decimal
 import uuid
 
-from .models import Design, Image, CustomizationOption
+from .models import Design, CustomizationOption
 from .utils import (
     generate_design_id,
     get_designer_statistics,
@@ -371,3 +372,274 @@ class CustomizationOptionModelUnitTest(TestCase):
         """Test additional_cost property for options without price impact"""
         # Empty option has no price impact setting
         self.assertEqual(self.empty_option.additional_cost, Decimal('0.00'))
+
+
+class DesignViewsModuleTest(TestCase):
+    def setUp(self):
+        """Set up test data for testing views"""
+        # Create admin user
+        self.admin_user = User.objects.create_user(
+            username='admin', 
+            email='admin@example.com',
+            password='adminpass',
+            is_staff=True
+        )
+        
+        # Create regular user
+        self.regular_user = User.objects.create_user(
+            username='regular',
+            email='regular@example.com', 
+            password='regularpass'
+        )
+        
+        # Create designer user
+        self.designer_user = User.objects.create_user(
+            username='designer',
+            email='designer@example.com', 
+            password='designerpass'
+        )
+        
+        # Create approved designer profile
+        self.designer = Designer.objects.create(
+            user=self.designer_user,
+            is_approved=True
+        )
+        # Ensure designer user has complete contact info
+        from accounts.models import ContactInfo
+        contact_info = ContactInfo.objects.create(address="123 Test St", phone="1234567890")
+        self.designer_user.contact_info = contact_info
+        self.designer_user.save()
+        
+        # Create unapproved designer user
+        self.unapproved_designer_user = User.objects.create_user(
+            username='unapproved',
+            email='unapproved@example.com', 
+            password='unapprovedpass'
+        )
+        
+        # Create unapproved designer profile
+        self.unapproved_designer = Designer.objects.create(
+            user=self.unapproved_designer_user,
+            is_approved=False
+        )
+        
+        # Create factory details
+        self.factory_details = FactoryDetails.objects.create(
+            factory_name="Test Factory",
+            location="Test Location",
+            production_capacity=1000
+        )
+        
+        # Create factory partner
+        self.factory_partner = FactoryPartner.objects.create(
+            user=self.admin_user,
+            factory_details=self.factory_details
+        )
+        
+        # Create dimensions
+        self.dimensions = Dimensions.objects.create(
+            length=1.0, 
+            width=1.0, 
+            unit="m"
+        )
+        
+        # Create material
+        self.material = TextileWaste.objects.create(
+            waste_id="TEST-MAT-001",
+            type="Fabric",
+            material="Cotton",
+            quantity=100,
+            unit="kg",
+            color="White",
+            dimensions=self.dimensions,
+            quality_grade="GOOD",
+            status="AVAILABLE",
+            factory=self.factory_partner
+        )
+        
+        # Create published design
+        self.published_design = Design.objects.create(
+            design_id="TEST-PUB-001",
+            name="Published Design",
+            description="This is a published design",
+            designer=self.designer,
+            price=Decimal('150.00'),
+            status="PUBLISHED"
+        )
+        self.published_design.required_materials.add(self.material)
+        
+        # Create draft design
+        self.draft_design = Design.objects.create(
+            design_id="TEST-DFT-001",
+            name="Draft Design",
+            description="This is a draft design",
+            designer=self.designer,
+            price=Decimal('120.00'),
+            status="DRAFT"
+        )
+        
+        # Create customization option
+        self.customization = CustomizationOption.objects.create(
+            option_id="TEST-OPT-001",
+            name="color",
+            type="COLOR",
+            available_choices=["red", "blue", "green"],
+            price_impact={"red": 10, "blue": 5, "green": 0},
+            design=self.published_design
+        )
+        
+        # Setup client
+        self.client = Client()
+    
+    def test_design_list_view(self):
+        """Test the design_list view shows published designs"""
+        response = self.client.get(reverse('designs:design_list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'designs/design_list.html')
+        self.assertIn('designs', response.context)
+        self.assertIn(self.published_design, response.context['designs'])
+        self.assertNotIn(self.draft_design, response.context['designs'])
+    
+    def test_design_list_search(self):
+        """Test the design_list search functionality"""
+        response = self.client.get(f"{reverse('designs:design_list')}?search=Published")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(self.published_design, response.context['designs'])
+        
+        response = self.client.get(f"{reverse('designs:design_list')}?search=Nonexistent")
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn(self.published_design, response.context['designs'])
+    
+    def test_design_detail_view_published(self):
+        """Test the design_detail view for published designs"""
+        response = self.client.get(reverse('designs:design_detail', kwargs={'design_id': self.published_design.design_id}))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'designs/design_detail.html')
+        self.assertEqual(response.context['design'], self.published_design)
+        self.assertIn('materials', response.context)
+    
+    def test_design_detail_view_draft_unauthenticated(self):
+        """Test unauthorized users cannot view draft designs"""
+        response = self.client.get(reverse('designs:design_detail', kwargs={'design_id': self.draft_design.design_id}))
+        self.assertEqual(response.status_code, 404)
+    
+    def test_design_detail_view_draft_owner(self):
+        """Test design owner can view their draft designs"""
+        self.client.login(username='designer', password='designerpass')
+        response = self.client.get(reverse('designs:design_detail', kwargs={'design_id': self.draft_design.design_id}))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['design'], self.draft_design)
+    
+    def test_designer_dashboard_approved(self):
+        """Test approved designer can access dashboard"""
+        self.client.login(username='designer', password='designerpass')
+        response = self.client.get(reverse('designs:designer_dashboard'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'designs/designer_dashboard.html')
+        self.assertIn('designs', response.context)
+        self.assertIn('total_designs', response.context)
+        self.assertIn('published_designs', response.context)
+    
+    def test_designer_dashboard_unapproved(self):
+        """Test unapproved designer is redirected from dashboard"""
+        self.client.login(username='unapproved', password='unapprovedpass')
+        response = self.client.get(reverse('designs:designer_dashboard'))
+        self.assertEqual(response.status_code, 302)  # Redirect expected
+    
+    def test_designer_dashboard_not_designer(self):
+        """Test non-designer user cannot access dashboard"""
+        self.client.login(username='regular', password='regularpass')
+        response = self.client.get(reverse('designs:designer_dashboard'))
+        self.assertEqual(response.status_code, 302)  # Redirect expected
+    
+    def test_design_create_view_get(self):
+        """Test the design_create GET view for approved designer"""
+        self.client.login(username='designer', password='designerpass')
+        response = self.client.get(reverse('designs:design_create'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'designs/design_form.html')
+        self.assertIn('form', response.context)
+        self.assertIn('options_formset', response.context)
+        self.assertIn('materials_formset', response.context)
+    
+    def test_design_create_unauthorized(self):
+        """Test unauthorized users cannot access design creation"""
+        response = self.client.get(reverse('designs:design_create'))
+        self.assertEqual(response.status_code, 302)  # Redirect to login
+        
+        # Regular user cannot create designs
+        self.client.login(username='regular', password='regularpass')
+        response = self.client.get(reverse('designs:design_create'))
+        self.assertEqual(response.status_code, 302)  # Redirect expected
+        
+        # Unapproved designer cannot create designs
+        self.client.login(username='unapproved', password='unapprovedpass')
+        response = self.client.get(reverse('designs:design_create'))
+        self.assertEqual(response.status_code, 302)  # Redirect expected
+    
+    def test_design_edit_view_get(self):
+        """Test the design_edit GET view for design owner"""
+        self.client.login(username='designer', password='designerpass')
+        response = self.client.get(reverse('designs:design_edit', kwargs={'design_id': self.published_design.design_id}))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'designs/design_form.html')
+        self.assertIn('form', response.context)
+        self.assertIn('design', response.context)
+    
+    def test_design_edit_unauthorized(self):
+        """Test unauthorized users cannot edit designs"""
+        # Unauthenticated user
+        response = self.client.get(reverse('designs:design_edit', kwargs={'design_id': self.published_design.design_id}))
+        self.assertEqual(response.status_code, 302)  # Redirect to login
+        
+        # Non-owner cannot edit
+        self.client.login(username='regular', password='regularpass')
+        response = self.client.get(reverse('designs:design_edit', kwargs={'design_id': self.published_design.design_id}))
+        self.assertEqual(response.status_code, 302)  # Redirect expected
+    
+    def test_design_delete_view_get(self):
+        """Test the design_delete GET view shows confirmation page"""
+        self.client.login(username='designer', password='designerpass')
+        response = self.client.get(reverse('designs:design_delete', kwargs={'design_id': self.published_design.design_id}))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'designs/design_confirm_delete.html')
+        self.assertEqual(response.context['design'], self.published_design)
+    
+    def test_design_delete_view_post(self):
+        """Test the design_delete POST view actually deletes the design"""
+        self.client.login(username='designer', password='designerpass')
+        response = self.client.post(reverse('designs:design_delete', kwargs={'design_id': self.published_design.design_id}))
+        self.assertEqual(response.status_code, 302)  # Redirect after delete
+        
+        # Check design is deleted (marked as deleted)
+        updated_design = Design.objects.get(design_id=self.published_design.design_id)
+        self.assertEqual(updated_design.status, "DELETED")
+    
+    def test_design_customize_view_get(self):
+        """Test the design_customize GET view for a published design"""
+        self.client.login(username='regular', password='regularpass')
+        response = self.client.get(reverse('designs:design_customize', kwargs={'design_id': self.published_design.design_id}))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'designs/design_customize.html')
+        self.assertEqual(response.context['design'], self.published_design)
+        self.assertIn('customization_options', response.context)
+    
+    def test_design_customize_post(self):
+        """Test the design_customize POST view with options selection"""
+        self.client.login(username='regular', password='regularpass')
+        response = self.client.post(
+            reverse('designs:design_customize', kwargs={'design_id': self.published_design.design_id}),
+            data={f'option_{self.customization.id}': 'red'}
+        )
+        self.assertEqual(response.status_code, 302)  # Redirect to order creation
+        
+        # Check session has the customizations saved
+        self.assertIn('design_customizations', self.client.session)
+        self.assertEqual(self.client.session['design_customizations']['design_id'], self.published_design.design_id)
+        self.assertEqual(self.client.session['design_customizations']['options']['color'], 'red')
+    
+    def test_design_customize_unauthorized_draft(self):
+        """Test users cannot customize draft designs"""
+        self.client.login(username='regular', password='regularpass')
+        response = self.client.get(reverse('designs:design_customize', kwargs={'design_id': self.draft_design.design_id}))
+        self.assertEqual(response.status_code, 404)  # Draft design not found
