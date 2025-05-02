@@ -153,11 +153,21 @@ class DesignerForm(forms.ModelForm):
         fields = []  # Add any additional designer-specific fields here
 
 
+class BuyerPreferencesForm(forms.ModelForm):
+    class Meta:
+        model = Buyer.preferences.field.related_model
+        fields = ["preferred_materials", "preferred_styles", "size_preferences", "max_price"]
+        widgets = {
+            "preferred_materials": forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g. Cotton, Wool"}),
+            "preferred_styles": forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g. Casual, Formal"}),
+            "size_preferences": forms.Textarea(attrs={"class": "form-control", "placeholder": "e.g. shirt: M, pants: 32"}),
+            "max_price": forms.NumberInput(attrs={"class": "form-control", "placeholder": "Maximum price"}),
+        }
+
 class BuyerForm(forms.ModelForm):
     class Meta:
         model = Buyer
-        fields = ["preferences"]
-        widgets = {"preferences": forms.Select(attrs={"class": "form-control"})}
+        fields = []  # Exclude 'preferences' field
 
 
 class AdminForm(forms.ModelForm):

@@ -16,6 +16,7 @@ import logging
 from .forms import (
     AdminForm,
     BuyerForm,
+    BuyerPreferencesForm,
     ContactInfoForm,
     DesignerForm,
     FactoryDetailsForm,
@@ -248,10 +249,11 @@ def profile_setup(request):
             factory_details = factory_partner.factory_details
             contact_info = user.contact_info
 
+            # Only redirect if profile is complete and this is not an edit request
             if all([
                 factory_details and factory_details.factory_name,
                 contact_info and contact_info.address and contact_info.phone
-            ]):
+            ]) and request.GET.get('edit') != 'true':
                 return redirect("inventory:dashboard")
         except (AttributeError, ObjectDoesNotExist):
             pass
@@ -277,7 +279,8 @@ def profile_setup(request):
     # Check if profile is complete for admin users
     elif user.user_type == "ADMIN" and hasattr(user, "admin"):
         contact_info = user.contact_info
-        if contact_info and contact_info.address and contact_info.phone:
+        # Only redirect if profile is complete and this is not an edit request
+        if contact_info and contact_info.address and contact_info.phone and request.GET.get('edit') != 'true':
             return redirect("accounts:admin_dashboard")  # Redirect to admin dashboard
 
     if request.method == "POST":
@@ -373,7 +376,6 @@ def profile_setup(request):
                 buyer_instance = user.buyer
             except (AttributeError, ObjectDoesNotExist):
                 buyer_instance = None
-                
             profile_form = BuyerForm(request.POST, instance=buyer_instance)
             if contact_form.is_valid() and profile_form.is_valid():
                 try:
@@ -381,12 +383,10 @@ def profile_setup(request):
                         contact_info = contact_form.save()
                         user.contact_info = contact_info
                         user.save()
-                        
                         buyer_profile = profile_form.save(commit=False)
                         if not buyer_instance:
                             buyer_profile.user = user
                         buyer_profile.save()
-                        
                         messages.success(request, "Buyer profile updated successfully!")
                         return redirect("designs:design_list")
                 except Exception as e:
@@ -451,9 +451,17 @@ def profile_setup(request):
         elif user.user_type == "BUYER":
             try:
                 buyer_instance = user.buyer
+                preferences_instance = buyer_instance.preferences
             except (AttributeError, ObjectDoesNotExist):
                 buyer_instance = None
+                preferences_instance = None
             profile_form = BuyerForm(instance=buyer_instance)
+            preferences_form = BuyerPreferencesForm(instance=preferences_instance)
+            return render(
+                request,
+                "accounts/profile_setup.html",
+                {"contact_form": contact_form, "profile_form": profile_form, "preferences_form": preferences_form, "user": user},
+            )
         elif user.user_type == "ADMIN":
             # Get or create Admin profile form
             try:

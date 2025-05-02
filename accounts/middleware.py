@@ -113,6 +113,10 @@ class ProfileCompletionMiddleware:
                 "/media/",
             ]
 
+            # Allow profile-setup with ?edit=true
+            if request.path.startswith("/accounts/profile-setup/") and request.GET.get("edit") == "true":
+                return self.get_response(request)
+
             # Check if current path is exempt
             current_path = request.path
             if not any(current_path.startswith(path) for path in exempt_paths):
