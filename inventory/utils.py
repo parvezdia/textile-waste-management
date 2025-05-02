@@ -198,36 +198,43 @@ def generate_waste_report(start_date, end_date, factory=None):
     if factory:
         queryset = queryset.filter(factory=factory)
 
+    # Material breakdown as a list of dicts for template rendering
+    material_breakdown = []
+    for entry in queryset.values("material").annotate(
+        quantity=Sum("quantity"),
+        items=Count("id"),
+        avg_score=Avg("sustainability_score")
+    ):
+        material_breakdown.append({
+            "name": entry["material"],
+            "quantity": entry["quantity"],
+            "items": entry["items"],
+            "avg_score": entry["avg_score"],
+        })
+
     report = {
         "period": {"start": start_date, "end": end_date},
         "total_items": queryset.count(),
         "total_quantity": queryset.aggregate(total=Sum("quantity"))["total"] or 0,
-        "total_weight": queryset.aggregate(total=Sum("quantity"))["total"]
-        or 0,  # For compatibility
+        "total_weight": queryset.aggregate(total=Sum("quantity"))["total"] or 0,  # For compatibility
         "avg_daily_intake": queryset.values("date_added__date")
-        .annotate(daily_total=Sum("quantity"))
-        .aggregate(Avg("daily_total"))["daily_total__avg"]
-        or 0,
-        "status_breakdown": queryset.values("status").annotate(
+            .annotate(daily_total=Sum("quantity"))
+            .aggregate(Avg("daily_total"))["daily_total__avg"] or 0,
+        "status_breakdown": list(queryset.values("status").annotate(
             count=Count("id"), quantity=Sum("quantity")
-        ),
-        "material_breakdown": queryset.values("material").annotate(
+        )),
+        "material_breakdown": material_breakdown,
+        "quality_breakdown": list(queryset.values("quality_grade").annotate(
             count=Count("id"), quantity=Sum("quantity")
-        ),
-        "quality_breakdown": queryset.values("quality_grade").annotate(
-            count=Count("id"), quantity=Sum("quantity")
-        ),
+        )),
         "sustainability_metrics": {
-            "average_score": queryset.aggregate(avg=Avg("sustainability_score"))["avg"]
-            or 0,
+            "average_score": queryset.aggregate(avg=Avg("sustainability_score"))["avg"] or 0,
             "high_impact": queryset.filter(sustainability_score__gte=80).count(),
-            "medium_impact": queryset.filter(
-                sustainability_score__range=[50, 79]
-            ).count(),
+            "medium_impact": queryset.filter(sustainability_score__range=[50, 79]).count(),
             "low_impact": queryset.filter(sustainability_score__lt=50).count(),
         },
         "items": queryset,
-        "waste_by_type": queryset.values("type").annotate(total=Sum("quantity")),
+        "waste_by_type": list(queryset.values("type").annotate(total=Sum("quantity"))),
     }
 
     return report

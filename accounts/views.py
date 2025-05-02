@@ -12,6 +12,9 @@ from io import BytesIO
 import datetime
 import math
 import logging
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.conf import settings
 
 from .forms import (
     AdminForm,
@@ -226,12 +229,14 @@ def profile(request):
     
     # Add specific data for designers
     if user.user_type == "DESIGNER" and hasattr(profile_data, 'portfolio'):
-        # Count published designs
         from designs.models import Design
+        # Count all designs for this designer (not just published)
+        total_designs_count = Design.objects.filter(designer=profile_data).count()
         published_designs_count = Design.objects.filter(
             designer=profile_data,
             status="PUBLISHED"
         ).count()
+        context["total_designs_count"] = total_designs_count
         context["published_designs_count"] = published_designs_count
         
     return render(request, "accounts/profile.html", context)
@@ -366,7 +371,12 @@ def profile_setup(request):
                                 "Your designer account is pending approval. Please wait for admin approval.",
                                 extra_tags='warning swal'
                             )
-                            return redirect("accounts:profile_setup")
+                            # Render the profile setup page again instead of redirecting
+                            return render(request, "accounts/profile_setup.html", {
+                                "contact_form": contact_form,
+                                "profile_form": profile_form,
+                                "user": user,
+                            })
                         return redirect("designs:designer_dashboard")
                 except Exception as e:
                     messages.error(request, f"Error saving profile: {str(e)}")
@@ -374,10 +384,13 @@ def profile_setup(request):
         elif user.user_type == "BUYER":
             try:
                 buyer_instance = user.buyer
+                preferences_instance = buyer_instance.preferences
             except (AttributeError, ObjectDoesNotExist):
                 buyer_instance = None
+                preferences_instance = None
             profile_form = BuyerForm(request.POST, instance=buyer_instance)
-            if contact_form.is_valid() and profile_form.is_valid():
+            preferences_form = BuyerPreferencesForm(request.POST, instance=preferences_instance)
+            if contact_form.is_valid() and profile_form.is_valid() and preferences_form.is_valid():
                 try:
                     with transaction.atomic():
                         contact_info = contact_form.save()
@@ -386,6 +399,9 @@ def profile_setup(request):
                         buyer_profile = profile_form.save(commit=False)
                         if not buyer_instance:
                             buyer_profile.user = user
+                        buyer_profile.save()
+                        preferences = preferences_form.save()
+                        buyer_profile.preferences = preferences
                         buyer_profile.save()
                         messages.success(request, "Buyer profile updated successfully!")
                         return redirect("designs:design_list")
@@ -520,7 +536,7 @@ def admin_dashboard(request):
     user = request.user
     
     # Verify user is admin
-    if user.user_type != "ADMIN":
+    if (user.user_type != "ADMIN"):
         messages.error(request, "Access denied. Admin privileges required.")
         return redirect("accounts:profile")
     
@@ -699,9 +715,7 @@ def admin_approve_designer(request, designer_id):
         designer = get_object_or_404(Designer, id=designer_id)
         
         # Approve the designer
-        designer.is_approved = True
-        designer.approval_date = timezone.now()
-        designer.save()
+        designer.approve()
         
         # Add notification for designer
         try:
@@ -714,11 +728,83 @@ def admin_approve_designer(request, designer_id):
         except Exception as e:
             logging.getLogger(__name__).warning(f"Notification send failed: {e}")
         
+        # Send approval email
+        try:
+            subject = "Your Designer Account Has Been Approved"
+            message = render_to_string(
+                'accounts/emails/designer_approval_notification.html',
+                {'designer': designer}
+            )
+            send_mail(
+                subject,
+                '',  # Empty plain text, use html_message
+                settings.DEFAULT_FROM_EMAIL,
+                [designer.user.email],
+                html_message=message,
+                fail_silently=True,
+            )
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Approval email send failed: {e}")
+        
         return JsonResponse({
             "status": "success",
             "message": "Designer approved successfully"
         })
         
+    except Exception as e:
+        return JsonResponse({
+            "status": "error",
+            "message": str(e)
+        }, status=500)
+
+@login_required
+def admin_reject_designer(request, designer_id):
+    """Reject a designer account"""
+    if request.method != 'POST':
+        return JsonResponse({
+            "status": "error",
+            "message": "Only POST requests are allowed"
+        }, status=405)
+
+    if not request.user.user_type == "ADMIN":
+        return JsonResponse({
+            "status": "error",
+            "message": "Access denied. Only administrators can reject designers."
+        }, status=403)
+    try:
+        designer = get_object_or_404(Designer, id=designer_id)
+        designer.reject()
+        # Send rejection notification
+        try:
+            from notifications.utils import send_notification
+            send_notification(
+                designer.user,
+                "We regret to inform you that your designer account application was not approved.",
+                notification_type="error"
+            )
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Notification send failed: {e}")
+        # Send rejection email
+        try:
+            subject = "Your Designer Account Application"
+            message = render_to_string(
+                'accounts/emails/designer_rejection_notification.html',
+                {'designer': designer}
+            )
+            send_mail(
+                subject,
+                '',
+                settings.DEFAULT_FROM_EMAIL,
+                [designer.user.email],
+                html_message=message,
+                fail_silently=True,
+            )
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Rejection email send failed: {e}")
+        return JsonResponse({
+            "status": "success",
+            "message": "Designer rejected and notified"
+        })
     except Exception as e:
         return JsonResponse({
             "status": "error",
@@ -795,12 +881,35 @@ def admin_update_order_status(request, order_id):
         return JsonResponse({"status": "error", "message": "Invalid request method"})
     
     from orders.models import Order
+    from inventory.models import TextileWaste
     order = get_object_or_404(Order, id=order_id)
     
     status = request.POST.get('status')
     if status not in [s[0] for s in Order.ORDER_STATUS_CHOICES]:
         return JsonResponse({"status": "error", "message": "Invalid status"})
     
+    # Inventory logic: adjust material quantities on DELIVERED/CANCELED
+    previous_status = order.status
+    design = order.design
+    quantity = order.quantity
+    # Only adjust if status is changing
+    if status == "DELIVERED" and previous_status != "DELIVERED":
+        # Reduce material quantities
+        for material in design.required_materials.all():
+            material.quantity = max(0, material.quantity - quantity)
+            # Optionally set status to USED if depleted
+            if material.quantity == 0:
+                material.status = "USED"
+            material.save()
+    elif status == "CANCELED" and previous_status == "DELIVERED":
+        # Restore material quantities
+        for material in design.required_materials.all():
+            material.quantity += quantity
+            # Optionally set status back to AVAILABLE if restored
+            if material.quantity > 0 and material.status == "USED":
+                material.status = "AVAILABLE"
+            material.save()
+
     # Update order status
     order.status = status
     order.save()

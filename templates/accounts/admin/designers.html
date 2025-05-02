@@ -39,8 +39,11 @@
                             <td>{{ designer.user.email }}</td>
                             <td>{{ designer.user.date_registered|date:"M d, Y" }}</td>
                             <td>
-                                <span class="badge {% if designer.is_approved %}bg-success{% else %}bg-warning{% endif %}">
-                                    {% if designer.is_approved %}Approved{% else %}Pending Approval{% endif %}
+                                <span class="badge 
+                                    {% if designer.status == 'APPROVED' %}bg-success
+                                    {% elif designer.status == 'REJECTED' %}bg-danger
+                                    {% else %}bg-warning{% endif %}">
+                                    {{ designer.get_status_display }}
                                 </span>
                             </td>
                             <td>{{ designer.design_count }} ({{ designer.published_count }} published)</td>
@@ -48,13 +51,21 @@
                                 <a href="{% url 'accounts:admin_designer_designs' designer_id=designer.id %}" class="btn btn-sm btn-info">
                                     <i class="fas fa-images"></i> View Designs
                                 </a>
-                                {% if not designer.is_approved %}
+                                {% if designer.status == 'PENDING' %}
                                 <form method="post" class="d-inline-block approve-form" action="{% url 'accounts:admin_approve_designer' designer_id=designer.id %}">
                                     {% csrf_token %}
                                     <button type="button" class="btn btn-sm btn-success approve-btn" 
                                         data-id="{{ designer.id }}"
                                         data-name="{{ designer.user.get_full_name|default:designer.user.username }}">
                                         <i class="fas fa-check"></i> Approve
+                                    </button>
+                                </form>
+                                <form method="post" class="d-inline-block reject-form" action="{% url 'accounts:admin_reject_designer' designer_id=designer.id %}">
+                                    {% csrf_token %}
+                                    <button type="button" class="btn btn-sm btn-danger reject-btn"
+                                        data-id="{{ designer.id }}"
+                                        data-name="{{ designer.user.get_full_name|default:designer.user.username }}">
+                                        <i class="fas fa-times"></i> Reject
                                     </button>
                                 </form>
                                 {% endif %}
@@ -154,6 +165,69 @@
                         });
                     } else {
                         alert('Failed to approve designer. Please try again.');
+                    }
+                }
+            });
+        }
+
+        // Handle reject button click
+        $('.reject-btn').click(function() {
+            const designerId = $(this).data('id');
+            const designerName = $(this).data('name');
+            const form = $(this).closest('form');
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    title: 'Reject Designer?',
+                    text: `Are you sure you want to reject "${designerName}"?`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc3545',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Yes, reject!'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        submitRejectForm(form);
+                    }
+                });
+            } else {
+                if (confirm(`Are you sure you want to reject "${designerName}"?`)) {
+                    submitRejectForm(form);
+                }
+            }
+        });
+        function submitRejectForm(form) {
+            const url = form.attr('action');
+            const csrfToken = form.find('input[name="csrfmiddlewaretoken"]').val();
+            $.ajax({
+                url: url,
+                type: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                success: function(response) {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            title: 'Rejected!',
+                            text: 'Designer rejected and notified',
+                            icon: 'success'
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        alert('Designer rejected and notified');
+                        location.reload();
+                    }
+                },
+                error: function(xhr, status, error) {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            title: 'Error!',
+                            text: 'Failed to reject designer. Please try again.',
+                            icon: 'error'
+                        });
+                    } else {
+                        alert('Failed to reject designer. Please try again.');
                     }
                 }
             });

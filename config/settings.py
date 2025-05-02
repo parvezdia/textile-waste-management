@@ -261,3 +261,12 @@ if DEBUG:
             "BACKEND": "channels.layers.InMemoryChannelLayer",
         }
     }
+
+# Email configuration for notifications
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'  # Replace with your SMTP server
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'pmia6373@gmail.com'  # Replace with your email
+EMAIL_HOST_PASSWORD = 'askg yrre vanf ytqy'  # Replace with your email password
+DEFAULT_FROM_EMAIL = 'no-reply@tfwms.com'  # Replace as needed

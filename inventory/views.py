@@ -22,6 +22,7 @@ from .utils import (
     get_inventory_metrics,
     get_trends_analysis,
 )
+from designs.decorators import approved_designer_required
 
 
 @login_required
@@ -541,17 +542,13 @@ def inventory_reports(request):
                 # Add one day to end_date to include the full day
                 end_date = datetime.combine(end_date.date(), datetime.max.time())
 
+                # Ensure timezone-aware datetimes for filtering
+                if timezone.is_naive(start_date):
+                    start_date = timezone.make_aware(start_date)
+                if timezone.is_naive(end_date):
+                    end_date = timezone.make_aware(end_date)
+
                 export_format = request.GET.get("format", "html")
-
-                # Validate date ranges
-                today = timezone.now().date()
-                if start_date.date() > end_date.date():
-                    messages.error(request, "Start date cannot be after end date.")
-                    return render(request, "inventory/reports.html", context)
-
-                if end_date.date() > today:
-                    messages.error(request, "End date cannot be in the future.")
-                    return render(request, "inventory/reports.html", context)
 
             except (TypeError, ValueError):
                 messages.error(request, "Invalid date range provided")
@@ -989,6 +986,7 @@ def reject_waste(request, waste_id):
 
 
 @login_required
+@approved_designer_required
 def designer_waste_list(request):
     """View for designers to see approved factory waste"""
     if not hasattr(request.user, "designer"):

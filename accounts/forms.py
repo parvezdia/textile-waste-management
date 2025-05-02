@@ -164,6 +164,50 @@ class BuyerPreferencesForm(forms.ModelForm):
             "max_price": forms.NumberInput(attrs={"class": "form-control", "placeholder": "Maximum price"}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Convert list fields to comma-separated string for display
+        if self.instance and self.instance.pk:
+            mats = self.instance.preferred_materials
+            styles = self.instance.preferred_styles
+            sizes = self.instance.size_preferences
+            if isinstance(mats, list):
+                self.initial["preferred_materials"] = ", ".join(mats)
+            if isinstance(styles, list):
+                self.initial["preferred_styles"] = ", ".join(styles)
+            if isinstance(sizes, dict):
+                self.initial["size_preferences"] = ", ".join(f"{k}: {v}" for k, v in sizes.items())
+
+    def clean_preferred_materials(self):
+        data = self.cleaned_data.get("preferred_materials", "")
+        if isinstance(data, list):
+            return data
+        return [item.strip() for item in data.split(",") if item.strip()]
+
+    def clean_preferred_styles(self):
+        data = self.cleaned_data.get("preferred_styles", "")
+        if isinstance(data, list):
+            return data
+        return [item.strip() for item in data.split(",") if item.strip()]
+
+    def clean_size_preferences(self):
+        data = self.cleaned_data.get("size_preferences", "")
+        if isinstance(data, dict):
+            return data
+        import json
+        try:
+            parsed = json.loads(data)
+            if isinstance(parsed, dict):
+                return parsed
+        except Exception:
+            pass
+        result = {}
+        for item in data.split(","):
+            if ":" in item:
+                key, value = item.split(":", 1)
+                result[key.strip()] = value.strip()
+        return result
+
 class BuyerForm(forms.ModelForm):
     class Meta:
         model = Buyer

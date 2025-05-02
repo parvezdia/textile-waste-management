@@ -65,6 +65,24 @@
                                     {% endif %}
                                 </div>
                             {% endfor %}
+                            {% if user.user_type == 'BUYER' and preferences_form %}
+                                <hr>
+                                <h5 class="mb-3">Preferences</h5>
+                                {% for field in preferences_form %}
+                                    <div class="mb-3">
+                                        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                                        {{ field|addclass:"form-control" }}
+                                        {% if field.errors %}
+                                            <div class="invalid-feedback d-block">
+                                                {{ field.errors|join:", " }}
+                                            </div>
+                                        {% endif %}
+                                        {% if field.help_text %}
+                                            <small class="form-text text-muted">{{ field.help_text }}</small>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
                         {% endif %}
 
                         <div class="d-grid gap-2 mt-4">

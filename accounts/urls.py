@@ -19,6 +19,7 @@ urlpatterns = [
     path("admin/reject-waste/<str:waste_id>/", views.admin_reject_waste, name="admin_reject_waste"),
     path("admin/designers/", views.admin_designers, name="admin_designers"),
     path("admin/approve-designer/<int:designer_id>/", views.admin_approve_designer, name="admin_approve_designer"),
+    path("admin/reject-designer/<int:designer_id>/", views.admin_reject_designer, name="admin_reject_designer"),
     path("admin/designer/<int:designer_id>/designs/", views.admin_designer_designs, name="admin_designer_designs"),
     path("admin/orders/", views.admin_orders, name="admin_orders"),
     path("admin/update-order-status/<int:order_id>/", views.admin_update_order_status, name="admin_update_order_status"),

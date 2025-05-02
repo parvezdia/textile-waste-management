@@ -15,3 +15,6 @@ INFO 2025-04-26 18:38:54,453 utils 17560 23576 Capacity Change: Factory GreenSpu
 INFO 2025-04-26 18:46:52,260 utils 11344 33080 Capacity Change: Factory GreenSpun Textiles #2 - Change: +17.0kg (87.3->104.3). New usage: 2.5%. Action: waste_upload
 INFO 2025-04-28 02:23:50,519 utils 17112 2792 Capacity Change: Factory CircularTextile Corp #1 - Change: +15.0kg (140.8->155.8). New usage: 10.2%. Action: waste_upload
 INFO 2025-04-28 15:29:53,084 utils 17444 34200 Capacity Change: Factory CircularTextile Corp #1 - Change: +34.0kg (140.8->174.8). New usage: 11.4%. Action: waste_upload
+INFO 2025-05-02 18:57:29,864 utils 13648 31612 Capacity Change: Factory CircularTextile Corp #1 - Change: +12.0kg (174.8->186.8). New usage: 12.2%. Action: waste_upload
+INFO 2025-05-02 18:58:30,901 utils 13648 4592 Capacity Change: Factory CircularTextile Corp #1 - Change: +12.0kg (186.8->198.8). New usage: 13.0%. Action: waste_upload
+INFO 2025-05-02 20:49:01,037 utils 32664 30788 Capacity Change: Factory EcoThread Solutions #1 - Change: +23.0kg (98.3->121.3). New usage: 2.6%. Action: waste_upload

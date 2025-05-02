@@ -160,15 +160,29 @@ class FactoryPartner(models.Model):
 
 
 class Designer(models.Model):
+    STATUS_CHOICES = [
+        ("PENDING", "Pending Approval"),
+        ("APPROVED", "Approved"),
+        ("REJECTED", "Rejected"),
+    ]
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     portfolio = models.ManyToManyField('designs.Design', related_name='designer_portfolio', blank=True)
     design_stats = models.JSONField(default=dict, blank=True)  # Design statistics
-    is_approved = models.BooleanField(default=False)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="PENDING")
     approval_date = models.DateTimeField(null=True, blank=True)
+    # Optionally keep is_approved for backward compatibility, but use status everywhere
+    is_approved = models.BooleanField(default=False)
 
     def approve(self):
+        self.status = "APPROVED"
         self.is_approved = True
         self.approval_date = timezone.now()
+        self.save()
+
+    def reject(self):
+        self.status = "REJECTED"
+        self.is_approved = False
+        self.approval_date = None
         self.save()
 
     def view_sales_stats(self):

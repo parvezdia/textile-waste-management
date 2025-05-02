@@ -240,6 +240,7 @@ class Command(BaseCommand):
                 designer = Designer.objects.get(user=user)
                 # Update existing designer with random approval status
                 is_approved = random.choice([True, True, True, False])  # 75% chance of being approved
+                status = "APPROVED" if is_approved else "PENDING"
                 designer.design_stats = {
                     "total_designs": 0,
                     "published_designs": 0,
@@ -247,11 +248,13 @@ class Command(BaseCommand):
                     "sustainability_score": random.randint(60, 95)
                 }
                 designer.is_approved = is_approved
+                designer.status = status
                 designer.approval_date = timezone.now() - timedelta(days=random.randint(1, 60)) if is_approved else None
                 designer.save()
             except Designer.DoesNotExist:
                 # Create new designer with random approval status
                 is_approved = random.choice([True, True, True, False])  # 75% chance of being approved
+                status = "APPROVED" if is_approved else "PENDING"
                 designer = Designer.objects.create(
                     user=user,
                     design_stats={
@@ -261,6 +264,7 @@ class Command(BaseCommand):
                         "sustainability_score": random.randint(60, 95)
                     },
                     is_approved=is_approved,
+                    status=status,
                     approval_date=timezone.now() - timedelta(days=random.randint(1, 60)) if is_approved else None
                 )
             
@@ -351,10 +355,13 @@ class Command(BaseCommand):
         materials = ["Cotton", "Linen", "Polyester", "Wool", "Silk", "Denim", "Canvas", "Rayon", "Nylon", "Spandex"]
         colors = ["Red", "Blue", "Green", "Yellow", "Black", "White", "Grey", "Purple", "Orange", "Pink", "Brown", "Navy"]
         statuses = ["AVAILABLE", "PENDING_REVIEW", "RESERVED", "USED"]
-        status_weights = [0.6, 0.15, 0.15, 0.1]  # Weighted probabilities
+        status_weights = [0.2, 0.7, 0.05, 0.05]  # AVAILABLE, PENDING_REVIEW, RESERVED, USED
         quality_grades = ["EXCELLENT", "GOOD", "FAIR", "POOR"]
         quality_weights = [0.3, 0.5, 0.15, 0.05]  # Weighted probabilities
         storage_locations = ["Warehouse A", "Warehouse B", "Storage Unit 1", "Storage Unit 2", "Main Factory", "Secondary Location"]
+        
+        # Use a fixed 'now' for all randomizations to spread dates correctly
+        now = timezone.now()
         
         for i in range(count):
             # Choose a random factory
@@ -379,9 +386,9 @@ class Command(BaseCommand):
             material_choice = random.choice(materials)
             quantity = round(random.uniform(0.5, 20.0), 2)
             
-            # Set creation date (between 1-90 days ago)
-            days_ago = random.randint(1, 90)
-            date_added = timezone.now() - timedelta(days=days_ago)
+            # Set creation date (between 0-179 days ago, i.e., last 6 months)
+            days_ago = random.randint(0, 179)
+            date_added = now - timedelta(days=days_ago)
             
             # 30% chance of having an expiry date
             expiry_date = None
@@ -439,7 +446,7 @@ class Command(BaseCommand):
         designs = []
         
         # Only use approved designers
-        approved_designers = [d for d in designers if d.is_approved]
+        approved_designers = [d for d in designers if getattr(d, 'status', None) == "APPROVED"]
         
         if not approved_designers:
             self.stdout.write(self.style.WARNING('No approved designers found. Skipping design creation.'))

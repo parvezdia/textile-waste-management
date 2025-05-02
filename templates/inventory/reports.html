@@ -73,7 +73,7 @@
                     </div>
                     <div class="col-md-4">
                         <label for="end_date" class="form-label">End Date</label>
-                        <input type="date" class="form-control" id="end_date" name="end_date" required value="{{ default_end_date }}">
+                        <input type="date" class="form-control" id="end_date" name="end_date" required value="{{ default_end_date }}" max="{{ default_end_date }}">
                     </div>
                     <div class="col-md-4">
                         <label for="format" class="form-label">Export Format</label>
@@ -240,9 +240,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // Start date future validation
         if (start) {
             const startTime = start.getTime();
-            const todayTime = today.setHours(0, 0, 0, 0);
-            
-            if (startTime > todayTime) {
+            const todayTime = new Date();
+            todayTime.setHours(0, 0, 0, 0);
+            if (startTime > todayTime.getTime()) {
                 startDate.classList.add('is-invalid');
                 isValid = false;
                 errorMessage = 'Start date cannot be in the future';
@@ -251,10 +251,10 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // End date future validation
         if (end) {
-            const endTime = end.getTime();
-            const todayTime = today.setHours(0, 0, 0, 0);
-            
-            if (endTime > todayTime) {
+            // Compare only the date part, ignore time
+            const endDateOnly = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+            const todayDateOnly = new Date(todayTime.getFullYear(), todayTime.getMonth(), todayTime.getDate());
+            if (endDateOnly > todayDateOnly) {
                 endDate.classList.add('is-invalid');
                 isValid = false;
                 errorMessage = 'End date cannot be in the future';
